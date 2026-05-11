@@ -33,24 +33,21 @@ class AppErrorView extends StatelessWidget {
               Text(
                 title,
                 textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
               ),
               const SizedBox(height: 8),
               Text(
                 message,
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: const Color(0xFF52616B),
-                    ),
+                  color: const Color(0xFF52616B),
+                ),
               ),
               if (onRetry != null) ...[
                 const SizedBox(height: 20),
-                FilledButton(
-                  onPressed: onRetry,
-                  child: Text(retryLabel),
-                ),
+                FilledButton(onPressed: onRetry, child: Text(retryLabel)),
               ],
             ],
           ),

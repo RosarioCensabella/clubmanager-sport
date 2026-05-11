@@ -1,0 +1,158 @@
+# Miscellaneous
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.buildlog/
+.history
+.svn/
+migrate_working_dir/
+
+# IntelliJ / Android Studio
+*.iml
+*.ipr
+*.iws
+.idea/
+.idea_modules/
+
+# Visual Studio Code
+.vscode/*
+!.vscode/extensions.json
+!.vscode/launch.json
+!.vscode/tasks.json
+
+# Flutter / Dart
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+build/
+coverage/
+
+# Flutter generated files
+GeneratedPluginRegistrant.java
+GeneratedPluginRegistrant.h
+GeneratedPluginRegistrant.m
+generated_plugin_registrant.dart
+
+# Symbolication related
+app.*.symbols
+
+# Obfuscation related
+app.*.map.json
+
+# Android
+android/.gradle/
+android/.idea/
+android/local.properties
+android/captures/
+android/app/debug/
+android/app/profile/
+android/app/release/
+android/app/*.apk
+android/app/*.aab
+android/app/*.jks
+android/app/*.keystore
+android/key.properties
+
+# iOS
+ios/Flutter/App.framework
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
+ios/Flutter/Generated.xcconfig
+ios/Flutter/ephemeral/
+ios/Flutter/flutter_export_environment.sh
+ios/ServiceDefinitions.json
+ios/Pods/
+ios/.symlinks/
+ios/Runner.xcworkspace/
+ios/Runner/GeneratedPluginRegistrant.*
+
+# macOS generated, if ever enabled
+macos/Flutter/ephemeral/
+macos/Pods/
+macos/Runner.xcworkspace/
+
+# Web generated, if ever enabled
+web/.dart_tool/
+
+# Windows generated, if ever enabled
+windows/flutter/ephemeral/
+
+# Linux generated, if ever enabled
+linux/flutter/ephemeral/
+
+# Firebase
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+.flutterfire
+firebase_options.dart
+
+# Supabase
+supabase/.branches/
+supabase/.temp/
+supabase/.env
+supabase/functions/.env
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Secrets and certificates
+*.pem
+*.p8
+*.p12
+*.cer
+*.certSigningRequest
+*.mobileprovision
+*.provisionprofile
+*.jks
+*.keystore
+key.properties
+secrets.json
+
+# Google / Apple service files
+google-services.json
+GoogleService-Info.plist
+AuthKey_*.p8
+
+# Sentry
+sentry.properties
+
+# Logs
+logs/
+*.tmp
+*.temp
+
+# Test output
+test-results/
+integration_test/results/
+
+# Local database / generated data
+*.sqlite
+*.sqlite3
+*.db
+
+# OS generated files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Node / website tools, if added later
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.next/
+out/
+dist/
+
+# Codemagic / CI local artifacts
+codemagic.yaml.local

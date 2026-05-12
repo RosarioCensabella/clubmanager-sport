@@ -7,9 +7,11 @@ import '../features/athletes/presentation/link_parent_screen.dart';
 import '../features/auth/presentation/login_screen.dart';
 import '../features/auth/presentation/register_screen.dart';
 import '../features/auth/presentation/reset_password_screen.dart';
+import '../features/callups/presentation/add_callups_screen.dart';
 import '../features/clubs/presentation/club_context_screen.dart';
 import '../features/clubs/presentation/create_club_screen.dart';
 import '../features/events/presentation/create_event_screen.dart';
+import '../features/events/presentation/event_detail_screen.dart';
 import '../features/events/presentation/events_screen.dart';
 import '../features/members/presentation/create_invitation_screen.dart';
 import '../features/members/presentation/invitations_screen.dart';
@@ -113,6 +115,24 @@ final GoRouter appRouter = GoRouter(
       path: '/events/create',
       name: 'events-create',
       builder: (context, state) => const CreateEventScreen(),
+    ),
+    GoRoute(
+      path: '/events/:eventId',
+      name: 'event-detail',
+      builder: (context, state) {
+        final eventId = state.pathParameters['eventId'] ?? '';
+
+        return EventDetailScreen(eventId: eventId);
+      },
+    ),
+    GoRoute(
+      path: '/events/:eventId/callups/add',
+      name: 'event-add-callups',
+      builder: (context, state) {
+        final eventId = state.pathParameters['eventId'] ?? '';
+
+        return AddCallupsScreen(eventId: eventId);
+      },
     ),
   ],
 );

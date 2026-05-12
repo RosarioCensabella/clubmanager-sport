@@ -52,6 +52,40 @@ class EventRepository {
     }
   }
 
+  Future<AppResult<EventSummary>> fetchEventById({
+    required String eventId,
+  }) async {
+    if (!SupabaseService.isConfigured) {
+      return const AppFailure(
+        'Supabase non è configurato.',
+        code: 'supabase_not_configured',
+      );
+    }
+
+    if (eventId.isEmpty) {
+      return const AppFailure('Evento non valido.', code: 'invalid_event_id');
+    }
+
+    try {
+      final data = await _client
+          .from('events')
+          .select(
+            'id, club_id, team_id, type, title, description, starts_at, ends_at, location_name, address, require_rsvp, visibility, status, teams(id, name)',
+          )
+          .eq('id', eventId)
+          .single();
+
+      return AppSuccess(EventSummary.fromMap(Map<String, dynamic>.from(data)));
+    } on PostgrestException catch (error) {
+      return AppFailure(error.message, code: error.code);
+    } catch (_) {
+      return const AppFailure(
+        'Impossibile caricare il dettaglio evento.',
+        code: 'event_detail_load_error',
+      );
+    }
+  }
+
   Future<AppResult<String>> createEvent({
     required CreateEventRequest request,
   }) async {

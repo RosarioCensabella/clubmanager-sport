@@ -1,5 +1,7 @@
 import 'package:go_router/go_router.dart';
 
+import '../features/athletes/presentation/athletes_screen.dart';
+import '../features/athletes/presentation/create_athlete_screen.dart';
 import '../features/auth/presentation/login_screen.dart';
 import '../features/auth/presentation/register_screen.dart';
 import '../features/auth/presentation/reset_password_screen.dart';
@@ -69,6 +71,16 @@ final GoRouter appRouter = GoRouter(
       path: '/invitations/create',
       name: 'invitations-create',
       builder: (context, state) => const CreateInvitationScreen(),
+    ),
+    GoRoute(
+      path: '/athletes',
+      name: 'athletes',
+      builder: (context, state) => const AthletesScreen(),
+    ),
+    GoRoute(
+      path: '/athletes/create',
+      name: 'athletes-create',
+      builder: (context, state) => const CreateAthleteScreen(),
     ),
   ],
 );

@@ -84,6 +84,10 @@ class _ClubContextScreenState extends ConsumerState<ClubContextScreen> {
     context.push('/communications');
   }
 
+  void _goToDocuments() {
+    context.push('/documents');
+  }
+
   bool get _hasActiveClub => _activeClubId != null && _activeClubId!.isNotEmpty;
 
   @override
@@ -92,31 +96,6 @@ class _ClubContextScreenState extends ConsumerState<ClubContextScreen> {
       appBar: AppBar(
         title: const Text('Club e permessi'),
         actions: [
-          IconButton(
-            tooltip: 'Comunicazioni',
-            onPressed: _hasActiveClub ? _goToCommunications : null,
-            icon: const Icon(Icons.campaign_outlined),
-          ),
-          IconButton(
-            tooltip: 'Calendario',
-            onPressed: _hasActiveClub ? _goToEvents : null,
-            icon: const Icon(Icons.event_outlined),
-          ),
-          IconButton(
-            tooltip: 'Atleti',
-            onPressed: _hasActiveClub ? _goToAthletes : null,
-            icon: const Icon(Icons.directions_run_outlined),
-          ),
-          IconButton(
-            tooltip: 'Inviti',
-            onPressed: _hasActiveClub ? _goToInvitations : null,
-            icon: const Icon(Icons.person_add_alt_1_outlined),
-          ),
-          IconButton(
-            tooltip: 'Squadre',
-            onPressed: _hasActiveClub ? _goToTeams : null,
-            icon: const Icon(Icons.groups_2_outlined),
-          ),
           IconButton(
             tooltip: 'Crea club',
             onPressed: _goToCreateClub,
@@ -173,17 +152,6 @@ class _ClubContextScreenState extends ConsumerState<ClubContextScreen> {
                       return _HeaderCard(
                         membershipsCount: data.length,
                         hasActiveClub: _hasActiveClub,
-                        onTeamsPressed: _hasActiveClub ? _goToTeams : null,
-                        onInvitationsPressed: _hasActiveClub
-                            ? _goToInvitations
-                            : null,
-                        onAthletesPressed: _hasActiveClub
-                            ? _goToAthletes
-                            : null,
-                        onEventsPressed: _hasActiveClub ? _goToEvents : null,
-                        onCommunicationsPressed: _hasActiveClub
-                            ? _goToCommunications
-                            : null,
                       );
                     }
 
@@ -201,6 +169,9 @@ class _ClubContextScreenState extends ConsumerState<ClubContextScreen> {
                         onEventsPressed: _hasActiveClub ? _goToEvents : null,
                         onCommunicationsPressed: _hasActiveClub
                             ? _goToCommunications
+                            : null,
+                        onDocumentsPressed: _hasActiveClub
+                            ? _goToDocuments
                             : null,
                       );
                     }
@@ -231,20 +202,10 @@ class _HeaderCard extends StatelessWidget {
   const _HeaderCard({
     required this.membershipsCount,
     required this.hasActiveClub,
-    required this.onTeamsPressed,
-    required this.onInvitationsPressed,
-    required this.onAthletesPressed,
-    required this.onEventsPressed,
-    required this.onCommunicationsPressed,
   });
 
   final int membershipsCount;
   final bool hasActiveClub;
-  final VoidCallback? onTeamsPressed;
-  final VoidCallback? onInvitationsPressed;
-  final VoidCallback? onAthletesPressed;
-  final VoidCallback? onEventsPressed;
-  final VoidCallback? onCommunicationsPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -252,6 +213,7 @@ class _HeaderCard extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(18),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Icon(
               Icons.verified_user_outlined,
@@ -281,7 +243,7 @@ class _HeaderCard extends StatelessWidget {
                   if (!hasActiveClub) ...[
                     const SizedBox(height: 8),
                     Text(
-                      'Seleziona un club per gestire squadre, membri, eventi e comunicazioni.',
+                      'Seleziona un club per abilitare squadre, atleti, eventi, comunicazioni e documenti.',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: const Color(0xFFC62828),
                       ),
@@ -289,31 +251,6 @@ class _HeaderCard extends StatelessWidget {
                   ],
                 ],
               ),
-            ),
-            IconButton(
-              tooltip: 'Comunicazioni',
-              onPressed: onCommunicationsPressed,
-              icon: const Icon(Icons.campaign_outlined),
-            ),
-            IconButton(
-              tooltip: 'Calendario',
-              onPressed: onEventsPressed,
-              icon: const Icon(Icons.event_outlined),
-            ),
-            IconButton(
-              tooltip: 'Atleti',
-              onPressed: onAthletesPressed,
-              icon: const Icon(Icons.directions_run_outlined),
-            ),
-            IconButton(
-              tooltip: 'Inviti',
-              onPressed: onInvitationsPressed,
-              icon: const Icon(Icons.person_add_alt_1_outlined),
-            ),
-            IconButton(
-              tooltip: 'Squadre',
-              onPressed: onTeamsPressed,
-              icon: const Icon(Icons.groups_2_outlined),
             ),
           ],
         ),
@@ -331,6 +268,7 @@ class _QuickActionsCard extends StatelessWidget {
     required this.onAthletesPressed,
     required this.onEventsPressed,
     required this.onCommunicationsPressed,
+    required this.onDocumentsPressed,
   });
 
   final bool hasActiveClub;
@@ -340,6 +278,7 @@ class _QuickActionsCard extends StatelessWidget {
   final VoidCallback? onAthletesPressed;
   final VoidCallback? onEventsPressed;
   final VoidCallback? onCommunicationsPressed;
+  final VoidCallback? onDocumentsPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -356,44 +295,88 @@ class _QuickActionsCard extends StatelessWidget {
               ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 12),
-            OutlinedButton.icon(
-              onPressed: onCreateClubPressed,
-              icon: const Icon(Icons.add_business_outlined),
-              label: const Text('Crea nuovo club'),
+            _ActionButton(
+              label: 'Documenti e scadenze',
+              icon: Icons.folder_copy_outlined,
+              onPressed: hasActiveClub ? onDocumentsPressed : null,
+              primary: true,
             ),
             const SizedBox(height: 8),
-            FilledButton.icon(
+            _ActionButton(
+              label: 'Comunicazioni',
+              icon: Icons.campaign_outlined,
               onPressed: hasActiveClub ? onCommunicationsPressed : null,
-              icon: const Icon(Icons.campaign_outlined),
-              label: const Text('Comunicazioni'),
+              primary: true,
             ),
             const SizedBox(height: 8),
-            FilledButton.icon(
-              onPressed: hasActiveClub ? onTeamsPressed : null,
-              icon: const Icon(Icons.groups_2_outlined),
-              label: const Text('Gestisci squadre'),
-            ),
-            const SizedBox(height: 8),
-            FilledButton.icon(
-              onPressed: hasActiveClub ? onAthletesPressed : null,
-              icon: const Icon(Icons.directions_run_outlined),
-              label: const Text('Gestisci atleti'),
-            ),
-            const SizedBox(height: 8),
-            FilledButton.icon(
+            _ActionButton(
+              label: 'Calendario eventi',
+              icon: Icons.event_outlined,
               onPressed: hasActiveClub ? onEventsPressed : null,
-              icon: const Icon(Icons.event_outlined),
-              label: const Text('Calendario eventi'),
+              primary: true,
             ),
             const SizedBox(height: 8),
-            FilledButton.icon(
+            _ActionButton(
+              label: 'Gestisci atleti',
+              icon: Icons.directions_run_outlined,
+              onPressed: hasActiveClub ? onAthletesPressed : null,
+              primary: true,
+            ),
+            const SizedBox(height: 8),
+            _ActionButton(
+              label: 'Gestisci squadre',
+              icon: Icons.groups_2_outlined,
+              onPressed: hasActiveClub ? onTeamsPressed : null,
+              primary: false,
+            ),
+            const SizedBox(height: 8),
+            _ActionButton(
+              label: 'Gestisci inviti',
+              icon: Icons.person_add_alt_1_outlined,
               onPressed: hasActiveClub ? onInvitationsPressed : null,
-              icon: const Icon(Icons.person_add_alt_1_outlined),
-              label: const Text('Gestisci inviti'),
+              primary: false,
+            ),
+            const SizedBox(height: 8),
+            _ActionButton(
+              label: 'Crea nuovo club',
+              icon: Icons.add_business_outlined,
+              onPressed: onCreateClubPressed,
+              primary: false,
             ),
           ],
         ),
       ),
+    );
+  }
+}
+
+class _ActionButton extends StatelessWidget {
+  const _ActionButton({
+    required this.label,
+    required this.icon,
+    required this.onPressed,
+    required this.primary,
+  });
+
+  final String label;
+  final IconData icon;
+  final VoidCallback? onPressed;
+  final bool primary;
+
+  @override
+  Widget build(BuildContext context) {
+    if (primary) {
+      return FilledButton.icon(
+        onPressed: onPressed,
+        icon: Icon(icon),
+        label: Text(label),
+      );
+    }
+
+    return OutlinedButton.icon(
+      onPressed: onPressed,
+      icon: Icon(icon),
+      label: Text(label),
     );
   }
 }

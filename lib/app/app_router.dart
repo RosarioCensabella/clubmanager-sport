@@ -14,6 +14,8 @@ import '../features/clubs/presentation/create_club_screen.dart';
 import '../features/communications/presentation/communication_detail_screen.dart';
 import '../features/communications/presentation/communications_screen.dart';
 import '../features/communications/presentation/create_communication_screen.dart';
+import '../features/documents/presentation/create_document_screen.dart';
+import '../features/documents/presentation/documents_screen.dart';
 import '../features/events/presentation/create_event_screen.dart';
 import '../features/events/presentation/event_detail_screen.dart';
 import '../features/events/presentation/events_screen.dart';
@@ -165,6 +167,16 @@ final GoRouter appRouter = GoRouter(
 
         return CommunicationDetailScreen(communicationId: communicationId);
       },
+    ),
+    GoRoute(
+      path: '/documents',
+      name: 'documents',
+      builder: (context, state) => const DocumentsScreen(),
+    ),
+    GoRoute(
+      path: '/documents/create',
+      name: 'documents-create',
+      builder: (context, state) => const CreateDocumentScreen(),
     ),
   ],
 );

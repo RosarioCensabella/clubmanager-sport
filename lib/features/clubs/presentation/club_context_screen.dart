@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/permissions/app_permission.dart';
-import '../../../core/permissions/club_role.dart';
 import '../../../core/permissions/permission_policy.dart';
 import '../../../core/utils/app_result.dart';
 import '../../../core/widgets/app_empty_state.dart';
@@ -81,6 +80,10 @@ class _ClubContextScreenState extends ConsumerState<ClubContextScreen> {
     context.push('/events');
   }
 
+  void _goToCommunications() {
+    context.push('/communications');
+  }
+
   bool get _hasActiveClub => _activeClubId != null && _activeClubId!.isNotEmpty;
 
   @override
@@ -89,6 +92,11 @@ class _ClubContextScreenState extends ConsumerState<ClubContextScreen> {
       appBar: AppBar(
         title: const Text('Club e permessi'),
         actions: [
+          IconButton(
+            tooltip: 'Comunicazioni',
+            onPressed: _hasActiveClub ? _goToCommunications : null,
+            icon: const Icon(Icons.campaign_outlined),
+          ),
           IconButton(
             tooltip: 'Calendario',
             onPressed: _hasActiveClub ? _goToEvents : null,
@@ -173,6 +181,9 @@ class _ClubContextScreenState extends ConsumerState<ClubContextScreen> {
                             ? _goToAthletes
                             : null,
                         onEventsPressed: _hasActiveClub ? _goToEvents : null,
+                        onCommunicationsPressed: _hasActiveClub
+                            ? _goToCommunications
+                            : null,
                       );
                     }
 
@@ -188,6 +199,9 @@ class _ClubContextScreenState extends ConsumerState<ClubContextScreen> {
                             ? _goToAthletes
                             : null,
                         onEventsPressed: _hasActiveClub ? _goToEvents : null,
+                        onCommunicationsPressed: _hasActiveClub
+                            ? _goToCommunications
+                            : null,
                       );
                     }
 
@@ -221,6 +235,7 @@ class _HeaderCard extends StatelessWidget {
     required this.onInvitationsPressed,
     required this.onAthletesPressed,
     required this.onEventsPressed,
+    required this.onCommunicationsPressed,
   });
 
   final int membershipsCount;
@@ -229,6 +244,7 @@ class _HeaderCard extends StatelessWidget {
   final VoidCallback? onInvitationsPressed;
   final VoidCallback? onAthletesPressed;
   final VoidCallback? onEventsPressed;
+  final VoidCallback? onCommunicationsPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -265,7 +281,7 @@ class _HeaderCard extends StatelessWidget {
                   if (!hasActiveClub) ...[
                     const SizedBox(height: 8),
                     Text(
-                      'Seleziona un club per gestire squadre, membri ed eventi.',
+                      'Seleziona un club per gestire squadre, membri, eventi e comunicazioni.',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: const Color(0xFFC62828),
                       ),
@@ -273,6 +289,11 @@ class _HeaderCard extends StatelessWidget {
                   ],
                 ],
               ),
+            ),
+            IconButton(
+              tooltip: 'Comunicazioni',
+              onPressed: onCommunicationsPressed,
+              icon: const Icon(Icons.campaign_outlined),
             ),
             IconButton(
               tooltip: 'Calendario',
@@ -309,6 +330,7 @@ class _QuickActionsCard extends StatelessWidget {
     required this.onInvitationsPressed,
     required this.onAthletesPressed,
     required this.onEventsPressed,
+    required this.onCommunicationsPressed,
   });
 
   final bool hasActiveClub;
@@ -317,6 +339,7 @@ class _QuickActionsCard extends StatelessWidget {
   final VoidCallback? onInvitationsPressed;
   final VoidCallback? onAthletesPressed;
   final VoidCallback? onEventsPressed;
+  final VoidCallback? onCommunicationsPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -337,6 +360,12 @@ class _QuickActionsCard extends StatelessWidget {
               onPressed: onCreateClubPressed,
               icon: const Icon(Icons.add_business_outlined),
               label: const Text('Crea nuovo club'),
+            ),
+            const SizedBox(height: 8),
+            FilledButton.icon(
+              onPressed: hasActiveClub ? onCommunicationsPressed : null,
+              icon: const Icon(Icons.campaign_outlined),
+              label: const Text('Comunicazioni'),
             ),
             const SizedBox(height: 8),
             FilledButton.icon(

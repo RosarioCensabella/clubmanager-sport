@@ -11,6 +11,9 @@ import '../features/auth/presentation/reset_password_screen.dart';
 import '../features/callups/presentation/add_callups_screen.dart';
 import '../features/clubs/presentation/club_context_screen.dart';
 import '../features/clubs/presentation/create_club_screen.dart';
+import '../features/communications/presentation/communication_detail_screen.dart';
+import '../features/communications/presentation/communications_screen.dart';
+import '../features/communications/presentation/create_communication_screen.dart';
 import '../features/events/presentation/create_event_screen.dart';
 import '../features/events/presentation/event_detail_screen.dart';
 import '../features/events/presentation/events_screen.dart';
@@ -142,6 +145,25 @@ final GoRouter appRouter = GoRouter(
         final eventId = state.pathParameters['eventId'] ?? '';
 
         return AttendanceScreen(eventId: eventId);
+      },
+    ),
+    GoRoute(
+      path: '/communications',
+      name: 'communications',
+      builder: (context, state) => const CommunicationsScreen(),
+    ),
+    GoRoute(
+      path: '/communications/create',
+      name: 'communications-create',
+      builder: (context, state) => const CreateCommunicationScreen(),
+    ),
+    GoRoute(
+      path: '/communications/:communicationId',
+      name: 'communication-detail',
+      builder: (context, state) {
+        final communicationId = state.pathParameters['communicationId'] ?? '';
+
+        return CommunicationDetailScreen(communicationId: communicationId);
       },
     ),
   ],

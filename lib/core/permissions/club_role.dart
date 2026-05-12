@@ -1,62 +1,35 @@
-enum ClubRole { owner, admin, teamManager, coach, athlete, parent, staff }
+enum ClubRole {
+  owner('owner'),
+  admin('admin'),
+  teamManager('team_manager'),
+  coach('coach'),
+  staff('staff'),
+  athlete('athlete'),
+  parent('parent'),
+  unknown('unknown');
 
-ClubRole clubRoleFromDatabaseValue(String? value) {
-  switch (value) {
-    case 'owner':
-      return ClubRole.owner;
-    case 'admin':
-      return ClubRole.admin;
-    case 'team_manager':
-      return ClubRole.teamManager;
-    case 'coach':
-      return ClubRole.coach;
-    case 'athlete':
-      return ClubRole.athlete;
-    case 'parent':
-      return ClubRole.parent;
-    case 'staff':
-      return ClubRole.staff;
-    default:
-      return ClubRole.athlete;
-  }
-}
+  const ClubRole(this.databaseValue);
 
-extension ClubRoleX on ClubRole {
-  String get databaseValue {
-    switch (this) {
-      case ClubRole.owner:
-        return 'owner';
-      case ClubRole.admin:
-        return 'admin';
-      case ClubRole.teamManager:
-        return 'team_manager';
-      case ClubRole.coach:
-        return 'coach';
-      case ClubRole.athlete:
-        return 'athlete';
-      case ClubRole.parent:
-        return 'parent';
-      case ClubRole.staff:
-        return 'staff';
-    }
-  }
+  final String databaseValue;
 
   String get label {
     switch (this) {
       case ClubRole.owner:
-        return 'Owner';
+        return 'Proprietario';
       case ClubRole.admin:
-        return 'Admin club';
+        return 'Amministratore';
       case ClubRole.teamManager:
-        return 'Manager squadra';
+        return 'Responsabile squadra';
       case ClubRole.coach:
         return 'Allenatore';
+      case ClubRole.staff:
+        return 'Staff';
       case ClubRole.athlete:
         return 'Atleta';
       case ClubRole.parent:
         return 'Genitore/Tutore';
-      case ClubRole.staff:
-        return 'Staff';
+      case ClubRole.unknown:
+        return 'Ruolo sconosciuto';
     }
   }
 
@@ -71,4 +44,33 @@ extension ClubRoleX on ClubRole {
         this == ClubRole.coach ||
         this == ClubRole.staff;
   }
+
+  bool get isFamilyRole {
+    return this == ClubRole.parent || this == ClubRole.athlete;
+  }
+
+  static ClubRole fromDatabaseValue(String? value) {
+    final normalized = value?.trim().toLowerCase();
+
+    if (normalized == null || normalized.isEmpty) {
+      return ClubRole.unknown;
+    }
+
+    for (final role in ClubRole.values) {
+      if (role.databaseValue == normalized ||
+          role.name.toLowerCase() == normalized) {
+        return role;
+      }
+    }
+
+    if (normalized == 'teammanager' || normalized == 'team-manager') {
+      return ClubRole.teamManager;
+    }
+
+    return ClubRole.unknown;
+  }
+}
+
+ClubRole clubRoleFromDatabaseValue(String? value) {
+  return ClubRole.fromDatabaseValue(value);
 }

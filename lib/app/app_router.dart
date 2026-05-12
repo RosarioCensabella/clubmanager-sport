@@ -4,6 +4,7 @@ import '../features/auth/presentation/login_screen.dart';
 import '../features/auth/presentation/register_screen.dart';
 import '../features/auth/presentation/reset_password_screen.dart';
 import '../features/clubs/presentation/club_context_screen.dart';
+import '../features/clubs/presentation/create_club_screen.dart';
 import '../features/splash/presentation/splash_screen.dart';
 import '../features/welcome/presentation/welcome_screen.dart';
 
@@ -39,6 +40,11 @@ final GoRouter appRouter = GoRouter(
       path: '/club-context',
       name: 'club-context',
       builder: (context, state) => const ClubContextScreen(),
+    ),
+    GoRoute(
+      path: '/clubs/create',
+      name: 'clubs-create',
+      builder: (context, state) => const CreateClubScreen(),
     ),
   ],
 );

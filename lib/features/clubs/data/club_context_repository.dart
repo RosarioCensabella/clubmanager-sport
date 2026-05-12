@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart' hide AuthUser;
 import '../../../core/services/supabase_service.dart';
 import '../../../core/utils/app_result.dart';
 import '../domain/club_membership_summary.dart';
+import '../domain/create_club_request.dart';
 
 class ClubContextRepository {
   ClubContextRepository();
@@ -54,6 +55,52 @@ class ClubContextRepository {
       return const AppFailure(
         'Impossibile caricare i club collegati al tuo account.',
         code: 'club_context_load_error',
+      );
+    }
+  }
+
+  Future<AppResult<String>> createClub(CreateClubRequest request) async {
+    if (!SupabaseService.isConfigured) {
+      return const AppFailure(
+        'Supabase non è configurato.',
+        code: 'supabase_not_configured',
+      );
+    }
+
+    final user = _client.auth.currentUser;
+
+    if (user == null) {
+      return const AppFailure(
+        'Devi effettuare l’accesso per creare un club.',
+        code: 'not_authenticated',
+      );
+    }
+
+    try {
+      final data = await _client
+          .from('clubs')
+          .insert(request.toInsertMap(ownerUserId: user.id))
+          .select('id')
+          .single();
+
+      final clubId = (data['id'] ?? '').toString();
+
+      if (clubId.isEmpty) {
+        return const AppFailure(
+          'Club creato, ma identificativo non ricevuto.',
+          code: 'club_created_without_id',
+        );
+      }
+
+      await setActiveClubId(clubId);
+
+      return AppSuccess(clubId);
+    } on PostgrestException catch (error) {
+      return AppFailure(error.message, code: error.code);
+    } catch (_) {
+      return const AppFailure(
+        'Impossibile creare il club. Riprova tra poco.',
+        code: 'club_create_error',
       );
     }
   }

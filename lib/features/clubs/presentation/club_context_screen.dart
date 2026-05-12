@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/permissions/app_permission.dart';
 import '../../../core/permissions/club_role.dart';
@@ -60,10 +61,23 @@ class _ClubContextScreenState extends ConsumerState<ClubContextScreen> {
     );
   }
 
+  void _goToCreateClub() {
+    context.push('/clubs/create');
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Club e permessi')),
+      appBar: AppBar(
+        title: const Text('Club e permessi'),
+        actions: [
+          IconButton(
+            tooltip: 'Crea club',
+            onPressed: _goToCreateClub,
+            icon: const Icon(Icons.add_business_outlined),
+          ),
+        ],
+      ),
       body: FutureBuilder<AppResult<List<ClubMembershipSummary>>>(
         future: _future,
         builder: (context, snapshot) {
@@ -92,9 +106,9 @@ class _ClubContextScreenState extends ConsumerState<ClubContextScreen> {
                   icon: Icons.shield_outlined,
                   title: 'Nessun club collegato',
                   message:
-                      'Il tuo account è attivo, ma non appartieni ancora a un club. Potrai creare un club o accettare un invito.',
-                  actionLabel: 'Aggiorna',
-                  onActionPressed: _reload,
+                      'Il tuo account è attivo, ma non appartieni ancora a un club. Puoi creare il tuo club o accettare un invito.',
+                  actionLabel: 'Crea club',
+                  onActionPressed: _goToCreateClub,
                 );
               }
 
@@ -125,6 +139,11 @@ class _ClubContextScreenState extends ConsumerState<ClubContextScreen> {
               );
           }
         },
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _goToCreateClub,
+        icon: const Icon(Icons.add),
+        label: const Text('Crea club'),
       ),
     );
   }

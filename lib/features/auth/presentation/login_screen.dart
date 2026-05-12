@@ -60,7 +60,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Accesso effettuato correttamente.')),
         );
-        context.go('/welcome');
+        context.go('/club-context');
 
       case AppFailure(:final message):
         ScaffoldMessenger.of(

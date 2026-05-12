@@ -9,6 +9,8 @@ import '../features/auth/presentation/register_screen.dart';
 import '../features/auth/presentation/reset_password_screen.dart';
 import '../features/clubs/presentation/club_context_screen.dart';
 import '../features/clubs/presentation/create_club_screen.dart';
+import '../features/events/presentation/create_event_screen.dart';
+import '../features/events/presentation/events_screen.dart';
 import '../features/members/presentation/create_invitation_screen.dart';
 import '../features/members/presentation/invitations_screen.dart';
 import '../features/splash/presentation/splash_screen.dart';
@@ -101,6 +103,16 @@ final GoRouter appRouter = GoRouter(
 
         return LinkParentScreen(athleteId: athleteId);
       },
+    ),
+    GoRoute(
+      path: '/events',
+      name: 'events',
+      builder: (context, state) => const EventsScreen(),
+    ),
+    GoRoute(
+      path: '/events/create',
+      name: 'events-create',
+      builder: (context, state) => const CreateEventScreen(),
     ),
   ],
 );

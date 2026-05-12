@@ -77,6 +77,10 @@ class _ClubContextScreenState extends ConsumerState<ClubContextScreen> {
     context.push('/athletes');
   }
 
+  void _goToEvents() {
+    context.push('/events');
+  }
+
   bool get _hasActiveClub => _activeClubId != null && _activeClubId!.isNotEmpty;
 
   @override
@@ -85,6 +89,11 @@ class _ClubContextScreenState extends ConsumerState<ClubContextScreen> {
       appBar: AppBar(
         title: const Text('Club e permessi'),
         actions: [
+          IconButton(
+            tooltip: 'Calendario',
+            onPressed: _hasActiveClub ? _goToEvents : null,
+            icon: const Icon(Icons.event_outlined),
+          ),
           IconButton(
             tooltip: 'Atleti',
             onPressed: _hasActiveClub ? _goToAthletes : null,
@@ -163,6 +172,7 @@ class _ClubContextScreenState extends ConsumerState<ClubContextScreen> {
                         onAthletesPressed: _hasActiveClub
                             ? _goToAthletes
                             : null,
+                        onEventsPressed: _hasActiveClub ? _goToEvents : null,
                       );
                     }
 
@@ -177,6 +187,7 @@ class _ClubContextScreenState extends ConsumerState<ClubContextScreen> {
                         onAthletesPressed: _hasActiveClub
                             ? _goToAthletes
                             : null,
+                        onEventsPressed: _hasActiveClub ? _goToEvents : null,
                       );
                     }
 
@@ -209,6 +220,7 @@ class _HeaderCard extends StatelessWidget {
     required this.onTeamsPressed,
     required this.onInvitationsPressed,
     required this.onAthletesPressed,
+    required this.onEventsPressed,
   });
 
   final int membershipsCount;
@@ -216,6 +228,7 @@ class _HeaderCard extends StatelessWidget {
   final VoidCallback? onTeamsPressed;
   final VoidCallback? onInvitationsPressed;
   final VoidCallback? onAthletesPressed;
+  final VoidCallback? onEventsPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -262,6 +275,11 @@ class _HeaderCard extends StatelessWidget {
               ),
             ),
             IconButton(
+              tooltip: 'Calendario',
+              onPressed: onEventsPressed,
+              icon: const Icon(Icons.event_outlined),
+            ),
+            IconButton(
               tooltip: 'Atleti',
               onPressed: onAthletesPressed,
               icon: const Icon(Icons.directions_run_outlined),
@@ -290,6 +308,7 @@ class _QuickActionsCard extends StatelessWidget {
     required this.onTeamsPressed,
     required this.onInvitationsPressed,
     required this.onAthletesPressed,
+    required this.onEventsPressed,
   });
 
   final bool hasActiveClub;
@@ -297,6 +316,7 @@ class _QuickActionsCard extends StatelessWidget {
   final VoidCallback? onTeamsPressed;
   final VoidCallback? onInvitationsPressed;
   final VoidCallback? onAthletesPressed;
+  final VoidCallback? onEventsPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -329,6 +349,12 @@ class _QuickActionsCard extends StatelessWidget {
               onPressed: hasActiveClub ? onAthletesPressed : null,
               icon: const Icon(Icons.directions_run_outlined),
               label: const Text('Gestisci atleti'),
+            ),
+            const SizedBox(height: 8),
+            FilledButton.icon(
+              onPressed: hasActiveClub ? onEventsPressed : null,
+              icon: const Icon(Icons.event_outlined),
+              label: const Text('Calendario eventi'),
             ),
             const SizedBox(height: 8),
             FilledButton.icon(

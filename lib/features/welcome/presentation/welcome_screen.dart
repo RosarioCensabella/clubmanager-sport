@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key});
@@ -47,28 +48,12 @@ class WelcomeScreen extends StatelessWidget {
             ),
             const SizedBox(height: 28),
             FilledButton(
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text(
-                      'Autenticazione disponibile nella prossima fase.',
-                    ),
-                  ),
-                );
-              },
+              onPressed: () => context.go('/login'),
               child: const Text('Accedi'),
             ),
             const SizedBox(height: 12),
             OutlinedButton(
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text(
-                      'Registrazione disponibile nella prossima fase.',
-                    ),
-                  ),
-                );
-              },
+              onPressed: () => context.go('/register'),
               child: const Text('Crea account'),
             ),
           ],

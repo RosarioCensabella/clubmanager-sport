@@ -27,7 +27,7 @@ class CallupRepository {
       final data = await _client
           .from('event_callups')
           .select(
-            'id, event_id, athlete_profile_id, status, notes, created_at, athlete_profiles(id, club_id, user_id, team_id, first_name, last_name, date_of_birth, jersey_number, sport_role, active, medical_certificate_status, medical_certificate_expiry, staff_notes, teams(id, name))',
+            'id, event_id, athlete_profile_id, status, notes, response_note, responded_by, responded_at, created_at, athlete_profiles(id, club_id, user_id, team_id, first_name, last_name, date_of_birth, jersey_number, sport_role, active, medical_certificate_status, medical_certificate_expiry, staff_notes, teams(id, name))',
           )
           .eq('event_id', eventId)
           .order('created_at');
@@ -120,6 +120,63 @@ class CallupRepository {
     }
   }
 
+  Future<AppResult<void>> updateCallupRsvp({
+    required String callupId,
+    required String status,
+    required String? responseNote,
+  }) async {
+    if (!SupabaseService.isConfigured) {
+      return const AppFailure(
+        'Supabase non è configurato.',
+        code: 'supabase_not_configured',
+      );
+    }
+
+    final user = _client.auth.currentUser;
+
+    if (user == null) {
+      return const AppFailure(
+        'Devi effettuare l’accesso per aggiornare la conferma.',
+        code: 'not_authenticated',
+      );
+    }
+
+    if (callupId.isEmpty) {
+      return const AppFailure(
+        'Convocazione non valida.',
+        code: 'invalid_callup_id',
+      );
+    }
+
+    if (!_allowedRsvpStatuses.contains(status)) {
+      return const AppFailure(
+        'Stato conferma non valido.',
+        code: 'invalid_rsvp_status',
+      );
+    }
+
+    try {
+      await _client
+          .from('event_callups')
+          .update({
+            'status': status,
+            'response_note': _nullableTrim(responseNote),
+            'responded_by': user.id,
+            'responded_at': DateTime.now().toUtc().toIso8601String(),
+          })
+          .eq('id', callupId);
+
+      return const AppSuccess(null);
+    } on PostgrestException catch (error) {
+      return AppFailure(error.message, code: error.code);
+    } catch (_) {
+      return const AppFailure(
+        'Impossibile aggiornare la conferma presenza.',
+        code: 'rsvp_update_error',
+      );
+    }
+  }
+
   Future<AppResult<void>> removeCallup({required String callupId}) async {
     if (!SupabaseService.isConfigured) {
       return const AppFailure(
@@ -148,6 +205,12 @@ class CallupRepository {
       );
     }
   }
+
+  static const Set<String> _allowedRsvpStatuses = {
+    'called',
+    'confirmed',
+    'declined',
+  };
 
   static String? _nullableTrim(String? value) {
     final trimmed = value?.trim();

@@ -68,10 +68,100 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
     context.push('/events/${event.id}/callups/add').then((_) => _reload());
   }
 
+  Future<void> _updateRsvp({
+    required CallupSummary callup,
+    required String status,
+  }) async {
+    final noteController = TextEditingController(
+      text: callup.responseNote ?? '',
+    );
+
+    final label = switch (status) {
+      'confirmed' => 'Confermare presenza?',
+      'declined' => 'Segnare non disponibile?',
+      'called' => 'Riportare in attesa?',
+      _ => 'Aggiornare conferma?',
+    };
+
+    final actionLabel = switch (status) {
+      'confirmed' => 'Conferma',
+      'declined' => 'Non disponibile',
+      'called' => 'In attesa',
+      _ => 'Salva',
+    };
+
+    final shouldUpdate = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: Text(label),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(callup.athlete.fullName),
+              const SizedBox(height: 16),
+              TextField(
+                controller: noteController,
+                maxLines: 3,
+                decoration: const InputDecoration(
+                  labelText: 'Nota risposta',
+                  hintText: 'Opzionale',
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Annulla'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: Text(actionLabel),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (shouldUpdate != true) {
+      noteController.dispose();
+      return;
+    }
+
+    final responseNote = noteController.text;
+    noteController.dispose();
+
+    final result = await ref
+        .read(callupRepositoryProvider)
+        .updateCallupRsvp(
+          callupId: callup.id,
+          status: status,
+          responseNote: responseNote,
+        );
+
+    if (!mounted) {
+      return;
+    }
+
+    switch (result) {
+      case AppSuccess():
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Conferma presenza aggiornata.')),
+        );
+        _reload();
+
+      case AppFailure(:final message):
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(message)));
+    }
+  }
+
   Future<void> _removeCallup(CallupSummary callup) async {
     final shouldRemove = await showDialog<bool>(
       context: context,
-      builder: (context) {
+      builder: (dialogContext) {
         return AlertDialog(
           title: const Text('Rimuovere convocazione?'),
           content: Text(
@@ -79,11 +169,11 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
+              onPressed: () => Navigator.of(dialogContext).pop(false),
               child: const Text('Annulla'),
             ),
             FilledButton(
-              onPressed: () => Navigator.of(context).pop(true),
+              onPressed: () => Navigator.of(dialogContext).pop(true),
               child: const Text('Rimuovi'),
             ),
           ],
@@ -119,47 +209,30 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<AppResult<_EventDetailData>>(
-      future: _future,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState != ConnectionState.done) {
-          return const Scaffold(
-            body: AppLoadingView(message: 'Caricamento evento...'),
-          );
-        }
+    return Scaffold(
+      appBar: AppBar(title: const Text('Evento')),
+      body: FutureBuilder<AppResult<_EventDetailData>>(
+        future: _future,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState != ConnectionState.done) {
+            return const AppLoadingView(message: 'Caricamento evento...');
+          }
 
-        final result = snapshot.data;
+          final result = snapshot.data;
 
-        if (result == null) {
-          return Scaffold(
-            appBar: AppBar(title: const Text('Evento')),
-            body: AppErrorView(
+          if (result == null) {
+            return AppErrorView(
               message: 'Risposta non valida durante il caricamento.',
               onRetry: _reload,
-            ),
-          );
-        }
-
-        switch (result) {
-          case AppFailure(:final message):
-            return Scaffold(
-              appBar: AppBar(title: const Text('Evento')),
-              body: AppErrorView(message: message, onRetry: _reload),
             );
+          }
 
-          case AppSuccess(:final data):
-            return Scaffold(
-              appBar: AppBar(
-                title: Text(data.event.title),
-                actions: [
-                  IconButton(
-                    tooltip: 'Aggiungi convocati',
-                    onPressed: () => _goToAddCallups(data.event),
-                    icon: const Icon(Icons.group_add_outlined),
-                  ),
-                ],
-              ),
-              body: RefreshIndicator(
+          switch (result) {
+            case AppFailure(:final message):
+              return AppErrorView(message: message, onRetry: _reload);
+
+            case AppSuccess(:final data):
+              return RefreshIndicator(
                 onRefresh: () async {
                   _reload();
                   await _future;
@@ -169,22 +242,25 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                   children: [
                     _EventInfoCard(event: data.event),
                     const SizedBox(height: 12),
+                    _RsvpSummaryCard(callups: data.callups),
+                    const SizedBox(height: 12),
                     _CallupsCard(
                       callups: data.callups,
                       onAddPressed: () => _goToAddCallups(data.event),
                       onRemovePressed: _removeCallup,
+                      onConfirmPressed: (callup) =>
+                          _updateRsvp(callup: callup, status: 'confirmed'),
+                      onDeclinePressed: (callup) =>
+                          _updateRsvp(callup: callup, status: 'declined'),
+                      onResetPressed: (callup) =>
+                          _updateRsvp(callup: callup, status: 'called'),
                     ),
                   ],
                 ),
-              ),
-              floatingActionButton: FloatingActionButton.extended(
-                onPressed: () => _goToAddCallups(data.event),
-                icon: const Icon(Icons.group_add_outlined),
-                label: const Text('Convoca'),
-              ),
-            );
-        }
-      },
+              );
+          }
+        },
+      ),
     );
   }
 }
@@ -271,16 +347,75 @@ class _EventInfoCard extends StatelessWidget {
   }
 }
 
+class _RsvpSummaryCard extends StatelessWidget {
+  const _RsvpSummaryCard({required this.callups});
+
+  final List<CallupSummary> callups;
+
+  @override
+  Widget build(BuildContext context) {
+    final waiting = callups.where((callup) => callup.isWaiting).length;
+    final confirmed = callups.where((callup) => callup.isConfirmed).length;
+    final declined = callups.where((callup) => callup.isDeclined).length;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Riepilogo RSVP',
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                Chip(
+                  label: Text('Convocati: ${callups.length}'),
+                  avatar: const Icon(Icons.group_outlined, size: 18),
+                ),
+                Chip(
+                  label: Text('Confermati: $confirmed'),
+                  avatar: const Icon(Icons.check_circle_outline, size: 18),
+                ),
+                Chip(
+                  label: Text('Non disponibili: $declined'),
+                  avatar: const Icon(Icons.cancel_outlined, size: 18),
+                ),
+                Chip(
+                  label: Text('In attesa: $waiting'),
+                  avatar: const Icon(Icons.hourglass_empty, size: 18),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _CallupsCard extends StatelessWidget {
   const _CallupsCard({
     required this.callups,
     required this.onAddPressed,
     required this.onRemovePressed,
+    required this.onConfirmPressed,
+    required this.onDeclinePressed,
+    required this.onResetPressed,
   });
 
   final List<CallupSummary> callups;
   final VoidCallback onAddPressed;
   final ValueChanged<CallupSummary> onRemovePressed;
+  final ValueChanged<CallupSummary> onConfirmPressed;
+  final ValueChanged<CallupSummary> onDeclinePressed;
+  final ValueChanged<CallupSummary> onResetPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -323,20 +458,12 @@ class _CallupsCard extends StatelessWidget {
               )
             else
               for (final callup in callups) ...[
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: CircleAvatar(child: Text(callup.athlete.initials)),
-                  title: Text(callup.athlete.fullName),
-                  subtitle: Text(
-                    callup.athlete.teamName == null
-                        ? callup.statusLabel
-                        : '${callup.statusLabel} · ${callup.athlete.teamName}',
-                  ),
-                  trailing: IconButton(
-                    tooltip: 'Rimuovi',
-                    onPressed: () => onRemovePressed(callup),
-                    icon: const Icon(Icons.delete_outline),
-                  ),
+                _CallupTile(
+                  callup: callup,
+                  onConfirmPressed: () => onConfirmPressed(callup),
+                  onDeclinePressed: () => onDeclinePressed(callup),
+                  onResetPressed: () => onResetPressed(callup),
+                  onRemovePressed: () => onRemovePressed(callup),
                 ),
                 if (callup != callups.last) const Divider(),
               ],
@@ -344,6 +471,104 @@ class _CallupsCard extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class _CallupTile extends StatelessWidget {
+  const _CallupTile({
+    required this.callup,
+    required this.onConfirmPressed,
+    required this.onDeclinePressed,
+    required this.onResetPressed,
+    required this.onRemovePressed,
+  });
+
+  final CallupSummary callup;
+  final VoidCallback onConfirmPressed;
+  final VoidCallback onDeclinePressed;
+  final VoidCallback onResetPressed;
+  final VoidCallback onRemovePressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Column(
+        children: [
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: CircleAvatar(child: Text(callup.athlete.initials)),
+            title: Text(callup.athlete.fullName),
+            subtitle: Text(_subtitle()),
+            trailing: IconButton(
+              tooltip: 'Rimuovi',
+              onPressed: onRemovePressed,
+              icon: const Icon(Icons.delete_outline),
+            ),
+          ),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              FilledButton.icon(
+                onPressed: callup.isConfirmed ? null : onConfirmPressed,
+                icon: const Icon(Icons.check_circle_outline),
+                label: const Text('Conferma'),
+              ),
+              OutlinedButton.icon(
+                onPressed: callup.isDeclined ? null : onDeclinePressed,
+                icon: const Icon(Icons.cancel_outlined),
+                label: const Text('Non disponibile'),
+              ),
+              TextButton.icon(
+                onPressed: callup.isWaiting ? null : onResetPressed,
+                icon: const Icon(Icons.hourglass_empty),
+                label: const Text('In attesa'),
+              ),
+            ],
+          ),
+          if (callup.responseNote != null &&
+              callup.responseNote!.trim().isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'Nota: ${callup.responseNote}',
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: const Color(0xFF52616B)),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  String _subtitle() {
+    final parts = <String>[callup.statusLabel];
+
+    if (callup.athlete.teamName != null &&
+        callup.athlete.teamName!.isNotEmpty) {
+      parts.add(callup.athlete.teamName!);
+    }
+
+    if (callup.respondedAt != null) {
+      parts.add('risposta ${_formatDateTime(callup.respondedAt!)}');
+    }
+
+    return parts.join(' · ');
+  }
+
+  String _formatDateTime(DateTime value) {
+    final local = value.toLocal();
+
+    final day = local.day.toString().padLeft(2, '0');
+    final month = local.month.toString().padLeft(2, '0');
+    final hour = local.hour.toString().padLeft(2, '0');
+    final minute = local.minute.toString().padLeft(2, '0');
+
+    return '$day/$month $hour:$minute';
   }
 }
 

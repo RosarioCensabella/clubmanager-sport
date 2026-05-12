@@ -9,6 +9,9 @@ class CallupSummary {
     required this.createdAt,
     required this.athlete,
     this.notes,
+    this.responseNote,
+    this.respondedBy,
+    this.respondedAt,
   });
 
   final String id;
@@ -16,6 +19,9 @@ class CallupSummary {
   final String athleteProfileId;
   final String status;
   final String? notes;
+  final String? responseNote;
+  final String? respondedBy;
+  final DateTime? respondedAt;
   final DateTime createdAt;
   final AthleteSummary athlete;
 
@@ -31,6 +37,9 @@ class CallupSummary {
       athleteProfileId: (map['athlete_profile_id'] ?? '').toString(),
       status: (map['status'] ?? 'called').toString(),
       notes: map['notes']?.toString(),
+      responseNote: map['response_note']?.toString(),
+      respondedBy: map['responded_by']?.toString(),
+      respondedAt: DateTime.tryParse((map['responded_at'] ?? '').toString()),
       createdAt:
           DateTime.tryParse((map['created_at'] ?? '').toString()) ??
           DateTime.now(),
@@ -41,15 +50,21 @@ class CallupSummary {
   String get statusLabel {
     switch (status) {
       case 'called':
-        return 'Convocato';
-      case 'removed':
-        return 'Rimosso';
+        return 'In attesa';
       case 'confirmed':
         return 'Confermato';
       case 'declined':
         return 'Non disponibile';
+      case 'removed':
+        return 'Rimosso';
       default:
         return status;
     }
   }
+
+  bool get isWaiting => status == 'called';
+
+  bool get isConfirmed => status == 'confirmed';
+
+  bool get isDeclined => status == 'declined';
 }

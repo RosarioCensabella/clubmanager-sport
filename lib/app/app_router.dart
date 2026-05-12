@@ -4,6 +4,7 @@ import '../features/athletes/presentation/athlete_detail_screen.dart';
 import '../features/athletes/presentation/athletes_screen.dart';
 import '../features/athletes/presentation/create_athlete_screen.dart';
 import '../features/athletes/presentation/link_parent_screen.dart';
+import '../features/attendance/presentation/attendance_screen.dart';
 import '../features/auth/presentation/login_screen.dart';
 import '../features/auth/presentation/register_screen.dart';
 import '../features/auth/presentation/reset_password_screen.dart';
@@ -132,6 +133,15 @@ final GoRouter appRouter = GoRouter(
         final eventId = state.pathParameters['eventId'] ?? '';
 
         return AddCallupsScreen(eventId: eventId);
+      },
+    ),
+    GoRoute(
+      path: '/events/:eventId/attendance',
+      name: 'event-attendance',
+      builder: (context, state) {
+        final eventId = state.pathParameters['eventId'] ?? '';
+
+        return AttendanceScreen(eventId: eventId);
       },
     ),
   ],

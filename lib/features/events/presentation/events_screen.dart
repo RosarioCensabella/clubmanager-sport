@@ -58,6 +58,10 @@ class _EventsScreenState extends ConsumerState<EventsScreen> {
     context.push('/events/${event.id}').then((_) => _reload());
   }
 
+  void _goToAttendance(EventSummary event) {
+    context.push('/events/${event.id}/attendance').then((_) => _reload());
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -119,6 +123,7 @@ class _EventsScreenState extends ConsumerState<EventsScreen> {
                     return _EventCard(
                       event: event,
                       onTap: () => _goToEventDetail(event),
+                      onAttendanceTap: () => _goToAttendance(event),
                     );
                   },
                 ),
@@ -136,10 +141,15 @@ class _EventsScreenState extends ConsumerState<EventsScreen> {
 }
 
 class _EventCard extends StatelessWidget {
-  const _EventCard({required this.event, required this.onTap});
+  const _EventCard({
+    required this.event,
+    required this.onTap,
+    required this.onAttendanceTap,
+  });
 
   final EventSummary event;
   final VoidCallback onTap;
+  final VoidCallback onAttendanceTap;
 
   @override
   Widget build(BuildContext context) {
@@ -215,6 +225,15 @@ class _EventCard extends StatelessWidget {
                             avatar: Icon(Icons.how_to_reg_outlined, size: 18),
                           ),
                       ],
+                    ),
+                    const SizedBox(height: 12),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: OutlinedButton.icon(
+                        onPressed: onAttendanceTap,
+                        icon: const Icon(Icons.fact_check_outlined),
+                        label: const Text('Registro presenze'),
+                      ),
                     ),
                   ],
                 ),

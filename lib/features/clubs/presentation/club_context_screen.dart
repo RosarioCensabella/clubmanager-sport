@@ -69,6 +69,10 @@ class _ClubContextScreenState extends ConsumerState<ClubContextScreen> {
     context.push('/teams');
   }
 
+  void _goToInvitations() {
+    context.push('/invitations');
+  }
+
   bool get _hasActiveClub => _activeClubId != null && _activeClubId!.isNotEmpty;
 
   @override
@@ -77,6 +81,11 @@ class _ClubContextScreenState extends ConsumerState<ClubContextScreen> {
       appBar: AppBar(
         title: const Text('Club e permessi'),
         actions: [
+          IconButton(
+            tooltip: 'Inviti',
+            onPressed: _hasActiveClub ? _goToInvitations : null,
+            icon: const Icon(Icons.person_add_alt_1_outlined),
+          ),
           IconButton(
             tooltip: 'Squadre',
             onPressed: _hasActiveClub ? _goToTeams : null,
@@ -139,6 +148,9 @@ class _ClubContextScreenState extends ConsumerState<ClubContextScreen> {
                         membershipsCount: data.length,
                         hasActiveClub: _hasActiveClub,
                         onTeamsPressed: _hasActiveClub ? _goToTeams : null,
+                        onInvitationsPressed: _hasActiveClub
+                            ? _goToInvitations
+                            : null,
                       );
                     }
 
@@ -147,6 +159,9 @@ class _ClubContextScreenState extends ConsumerState<ClubContextScreen> {
                         hasActiveClub: _hasActiveClub,
                         onCreateClubPressed: _goToCreateClub,
                         onTeamsPressed: _hasActiveClub ? _goToTeams : null,
+                        onInvitationsPressed: _hasActiveClub
+                            ? _goToInvitations
+                            : null,
                       );
                     }
 
@@ -177,11 +192,13 @@ class _HeaderCard extends StatelessWidget {
     required this.membershipsCount,
     required this.hasActiveClub,
     required this.onTeamsPressed,
+    required this.onInvitationsPressed,
   });
 
   final int membershipsCount;
   final bool hasActiveClub;
   final VoidCallback? onTeamsPressed;
+  final VoidCallback? onInvitationsPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -228,6 +245,11 @@ class _HeaderCard extends StatelessWidget {
               ),
             ),
             IconButton(
+              tooltip: 'Inviti',
+              onPressed: onInvitationsPressed,
+              icon: const Icon(Icons.person_add_alt_1_outlined),
+            ),
+            IconButton(
               tooltip: 'Squadre',
               onPressed: onTeamsPressed,
               icon: const Icon(Icons.groups_2_outlined),
@@ -244,11 +266,13 @@ class _QuickActionsCard extends StatelessWidget {
     required this.hasActiveClub,
     required this.onCreateClubPressed,
     required this.onTeamsPressed,
+    required this.onInvitationsPressed,
   });
 
   final bool hasActiveClub;
   final VoidCallback onCreateClubPressed;
   final VoidCallback? onTeamsPressed;
+  final VoidCallback? onInvitationsPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -275,6 +299,12 @@ class _QuickActionsCard extends StatelessWidget {
               onPressed: hasActiveClub ? onTeamsPressed : null,
               icon: const Icon(Icons.groups_2_outlined),
               label: const Text('Gestisci squadre'),
+            ),
+            const SizedBox(height: 8),
+            FilledButton.icon(
+              onPressed: hasActiveClub ? onInvitationsPressed : null,
+              icon: const Icon(Icons.person_add_alt_1_outlined),
+              label: const Text('Gestisci inviti'),
             ),
           ],
         ),

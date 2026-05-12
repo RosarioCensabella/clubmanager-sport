@@ -54,6 +54,10 @@ class _AthletesScreenState extends ConsumerState<AthletesScreen> {
     context.push('/athletes/create').then((_) => _reload());
   }
 
+  void _goToAthleteDetail(AthleteSummary athlete) {
+    context.push('/athletes/${athlete.id}').then((_) => _reload());
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -112,7 +116,10 @@ class _AthletesScreenState extends ConsumerState<AthletesScreen> {
                   itemBuilder: (context, index) {
                     final athlete = data[index];
 
-                    return _AthleteCard(athlete: athlete);
+                    return _AthleteCard(
+                      athlete: athlete,
+                      onTap: () => _goToAthleteDetail(athlete),
+                    );
                   },
                 ),
               );
@@ -129,9 +136,10 @@ class _AthletesScreenState extends ConsumerState<AthletesScreen> {
 }
 
 class _AthleteCard extends StatelessWidget {
-  const _AthleteCard({required this.athlete});
+  const _AthleteCard({required this.athlete, required this.onTap});
 
   final AthleteSummary athlete;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -140,15 +148,7 @@ class _AthleteCard extends StatelessWidget {
     return Card(
       child: InkWell(
         borderRadius: BorderRadius.circular(20),
-        onTap: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                'Collegamento genitori/tutori disponibile nella prossima sotto-fase.',
-              ),
-            ),
-          );
-        },
+        onTap: onTap,
         child: Padding(
           padding: const EdgeInsets.all(18),
           child: Row(
@@ -214,6 +214,7 @@ class _AthleteCard extends StatelessWidget {
                   ],
                 ),
               ),
+              const Icon(Icons.chevron_right),
             ],
           ),
         ),

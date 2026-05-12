@@ -1,7 +1,9 @@
 import 'package:go_router/go_router.dart';
 
+import '../features/athletes/presentation/athlete_detail_screen.dart';
 import '../features/athletes/presentation/athletes_screen.dart';
 import '../features/athletes/presentation/create_athlete_screen.dart';
+import '../features/athletes/presentation/link_parent_screen.dart';
 import '../features/auth/presentation/login_screen.dart';
 import '../features/auth/presentation/register_screen.dart';
 import '../features/auth/presentation/reset_password_screen.dart';
@@ -81,6 +83,24 @@ final GoRouter appRouter = GoRouter(
       path: '/athletes/create',
       name: 'athletes-create',
       builder: (context, state) => const CreateAthleteScreen(),
+    ),
+    GoRoute(
+      path: '/athletes/:athleteId',
+      name: 'athlete-detail',
+      builder: (context, state) {
+        final athleteId = state.pathParameters['athleteId'] ?? '';
+
+        return AthleteDetailScreen(athleteId: athleteId);
+      },
+    ),
+    GoRoute(
+      path: '/athletes/:athleteId/parents/link',
+      name: 'athlete-link-parent',
+      builder: (context, state) {
+        final athleteId = state.pathParameters['athleteId'] ?? '';
+
+        return LinkParentScreen(athleteId: athleteId);
+      },
     ),
   ],
 );

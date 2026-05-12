@@ -62,8 +62,14 @@ class _ClubContextScreenState extends ConsumerState<ClubContextScreen> {
   }
 
   void _goToCreateClub() {
-    context.push('/clubs/create');
+    context.push('/clubs/create').then((_) => _reload());
   }
+
+  void _goToTeams() {
+    context.push('/teams');
+  }
+
+  bool get _hasActiveClub => _activeClubId != null && _activeClubId!.isNotEmpty;
 
   @override
   Widget build(BuildContext context) {
@@ -71,6 +77,11 @@ class _ClubContextScreenState extends ConsumerState<ClubContextScreen> {
       appBar: AppBar(
         title: const Text('Club e permessi'),
         actions: [
+          IconButton(
+            tooltip: 'Squadre',
+            onPressed: _hasActiveClub ? _goToTeams : null,
+            icon: const Icon(Icons.groups_2_outlined),
+          ),
           IconButton(
             tooltip: 'Crea club',
             onPressed: _goToCreateClub,
@@ -119,15 +130,27 @@ class _ClubContextScreenState extends ConsumerState<ClubContextScreen> {
                 },
                 child: ListView.separated(
                   padding: const EdgeInsets.all(24),
-                  itemCount: data.length + 1,
+                  itemCount: data.length + 2,
                   separatorBuilder: (context, index) =>
                       const SizedBox(height: 12),
                   itemBuilder: (context, index) {
                     if (index == 0) {
-                      return _HeaderCard(membershipsCount: data.length);
+                      return _HeaderCard(
+                        membershipsCount: data.length,
+                        hasActiveClub: _hasActiveClub,
+                        onTeamsPressed: _hasActiveClub ? _goToTeams : null,
+                      );
                     }
 
-                    final membership = data[index - 1];
+                    if (index == 1) {
+                      return _QuickActionsCard(
+                        hasActiveClub: _hasActiveClub,
+                        onCreateClubPressed: _goToCreateClub,
+                        onTeamsPressed: _hasActiveClub ? _goToTeams : null,
+                      );
+                    }
+
+                    final membership = data[index - 2];
 
                     return _ClubMembershipCard(
                       membership: membership,
@@ -150,9 +173,15 @@ class _ClubContextScreenState extends ConsumerState<ClubContextScreen> {
 }
 
 class _HeaderCard extends StatelessWidget {
-  const _HeaderCard({required this.membershipsCount});
+  const _HeaderCard({
+    required this.membershipsCount,
+    required this.hasActiveClub,
+    required this.onTeamsPressed,
+  });
 
   final int membershipsCount;
+  final bool hasActiveClub;
+  final VoidCallback? onTeamsPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -186,8 +215,66 @@ class _HeaderCard extends StatelessWidget {
                       color: const Color(0xFF52616B),
                     ),
                   ),
+                  if (!hasActiveClub) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      'Seleziona un club per gestire squadre, membri ed eventi.',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: const Color(0xFFC62828),
+                      ),
+                    ),
+                  ],
                 ],
               ),
+            ),
+            IconButton(
+              tooltip: 'Squadre',
+              onPressed: onTeamsPressed,
+              icon: const Icon(Icons.groups_2_outlined),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _QuickActionsCard extends StatelessWidget {
+  const _QuickActionsCard({
+    required this.hasActiveClub,
+    required this.onCreateClubPressed,
+    required this.onTeamsPressed,
+  });
+
+  final bool hasActiveClub;
+  final VoidCallback onCreateClubPressed;
+  final VoidCallback? onTeamsPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'Azioni rapide',
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: onCreateClubPressed,
+              icon: const Icon(Icons.add_business_outlined),
+              label: const Text('Crea nuovo club'),
+            ),
+            const SizedBox(height: 8),
+            FilledButton.icon(
+              onPressed: hasActiveClub ? onTeamsPressed : null,
+              icon: const Icon(Icons.groups_2_outlined),
+              label: const Text('Gestisci squadre'),
             ),
           ],
         ),

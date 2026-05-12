@@ -6,6 +6,8 @@ import '../features/auth/presentation/reset_password_screen.dart';
 import '../features/clubs/presentation/club_context_screen.dart';
 import '../features/clubs/presentation/create_club_screen.dart';
 import '../features/splash/presentation/splash_screen.dart';
+import '../features/teams/presentation/create_team_screen.dart';
+import '../features/teams/presentation/teams_screen.dart';
 import '../features/welcome/presentation/welcome_screen.dart';
 
 final GoRouter appRouter = GoRouter(
@@ -45,6 +47,16 @@ final GoRouter appRouter = GoRouter(
       path: '/clubs/create',
       name: 'clubs-create',
       builder: (context, state) => const CreateClubScreen(),
+    ),
+    GoRoute(
+      path: '/teams',
+      name: 'teams',
+      builder: (context, state) => const TeamsScreen(),
+    ),
+    GoRoute(
+      path: '/teams/create',
+      name: 'teams-create',
+      builder: (context, state) => const CreateTeamScreen(),
     ),
   ],
 );

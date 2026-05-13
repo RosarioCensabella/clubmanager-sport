@@ -40,6 +40,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     context.push('/privacy');
   }
 
+  void _goToLegal() {
+    context.push('/legal');
+  }
+
   Future<void> _save(NotificationPreferences preferences) async {
     if (_isSaving) {
       return;
@@ -146,6 +150,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       onChanged: _save,
                       onInfoPressed: _showOperationalInfo,
                     ),
+                    const SizedBox(height: 12),
+                    _LegalCard(onPressed: _goToLegal),
                     const SizedBox(height: 12),
                     _PrivacyAccountCard(onPressed: _goToPrivacy),
                     const SizedBox(height: 12),
@@ -332,6 +338,30 @@ class _NotificationSettingsCard extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _LegalCard extends StatelessWidget {
+  const _LegalCard({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: ListTile(
+        leading: Icon(
+          Icons.gavel_outlined,
+          color: Theme.of(context).colorScheme.primary,
+        ),
+        title: const Text('Documenti legali e informazioni app'),
+        subtitle: const Text(
+          'Privacy, termini, eliminazione account e dati versione.',
+        ),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: onPressed,
       ),
     );
   }

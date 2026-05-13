@@ -22,6 +22,8 @@ import '../features/events/presentation/events_screen.dart';
 import '../features/fees/presentation/create_fee_screen.dart';
 import '../features/fees/presentation/fee_detail_screen.dart';
 import '../features/fees/presentation/fees_screen.dart';
+import '../features/legal/presentation/legal_center_screen.dart';
+import '../features/legal/presentation/legal_document_screen.dart';
 import '../features/members/presentation/create_invitation_screen.dart';
 import '../features/members/presentation/invitations_screen.dart';
 import '../features/privacy/presentation/privacy_screen.dart';
@@ -74,6 +76,20 @@ final GoRouter appRouter = GoRouter(
       path: '/privacy',
       name: 'privacy',
       builder: (context, state) => const PrivacyScreen(),
+    ),
+    GoRoute(
+      path: '/legal',
+      name: 'legal',
+      builder: (context, state) => const LegalCenterScreen(),
+    ),
+    GoRoute(
+      path: '/legal/:documentId',
+      name: 'legal-document',
+      builder: (context, state) {
+        final documentId = state.pathParameters['documentId'] ?? '';
+
+        return LegalDocumentScreen(documentId: documentId);
+      },
     ),
     GoRoute(
       path: '/club-context',

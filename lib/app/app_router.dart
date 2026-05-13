@@ -24,6 +24,7 @@ import '../features/fees/presentation/fee_detail_screen.dart';
 import '../features/fees/presentation/fees_screen.dart';
 import '../features/members/presentation/create_invitation_screen.dart';
 import '../features/members/presentation/invitations_screen.dart';
+import '../features/profile/presentation/profile_screen.dart';
 import '../features/splash/presentation/splash_screen.dart';
 import '../features/teams/presentation/create_team_screen.dart';
 import '../features/teams/presentation/teams_screen.dart';
@@ -56,6 +57,11 @@ final GoRouter appRouter = GoRouter(
       path: '/reset-password',
       name: 'reset-password',
       builder: (context, state) => const ResetPasswordScreen(),
+    ),
+    GoRoute(
+      path: '/profile',
+      name: 'profile',
+      builder: (context, state) => const ProfileScreen(),
     ),
     GoRoute(
       path: '/club-context',

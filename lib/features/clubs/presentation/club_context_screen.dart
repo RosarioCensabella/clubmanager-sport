@@ -64,6 +64,10 @@ class _ClubContextScreenState extends ConsumerState<ClubContextScreen> {
     context.push('/clubs/create').then((_) => _reload());
   }
 
+  void _goToProfile() {
+    context.push('/profile');
+  }
+
   void _goToTeams() {
     context.push('/teams');
   }
@@ -100,6 +104,11 @@ class _ClubContextScreenState extends ConsumerState<ClubContextScreen> {
       appBar: AppBar(
         title: const Text('Club e permessi'),
         actions: [
+          IconButton(
+            tooltip: 'Profilo utente',
+            onPressed: _goToProfile,
+            icon: const Icon(Icons.account_circle_outlined),
+          ),
           IconButton(
             tooltip: 'Crea club',
             onPressed: _goToCreateClub,
@@ -162,6 +171,7 @@ class _ClubContextScreenState extends ConsumerState<ClubContextScreen> {
                     if (index == 1) {
                       return _QuickActionsCard(
                         hasActiveClub: _hasActiveClub,
+                        onProfilePressed: _goToProfile,
                         onCreateClubPressed: _goToCreateClub,
                         onTeamsPressed: _hasActiveClub ? _goToTeams : null,
                         onInvitationsPressed: _hasActiveClub
@@ -267,6 +277,7 @@ class _HeaderCard extends StatelessWidget {
 class _QuickActionsCard extends StatelessWidget {
   const _QuickActionsCard({
     required this.hasActiveClub,
+    required this.onProfilePressed,
     required this.onCreateClubPressed,
     required this.onTeamsPressed,
     required this.onInvitationsPressed,
@@ -278,6 +289,7 @@ class _QuickActionsCard extends StatelessWidget {
   });
 
   final bool hasActiveClub;
+  final VoidCallback onProfilePressed;
   final VoidCallback onCreateClubPressed;
   final VoidCallback? onTeamsPressed;
   final VoidCallback? onInvitationsPressed;
@@ -302,6 +314,13 @@ class _QuickActionsCard extends StatelessWidget {
               ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 12),
+            _ActionButton(
+              label: 'Profilo utente',
+              icon: Icons.account_circle_outlined,
+              onPressed: onProfilePressed,
+              primary: true,
+            ),
+            const SizedBox(height: 8),
             _ActionButton(
               label: 'Quote associative',
               icon: Icons.payments_outlined,
@@ -424,11 +443,7 @@ class _ClubMembershipCard extends StatelessWidget {
                   CircleAvatar(
                     backgroundColor: Theme.of(context).colorScheme.primary,
                     foregroundColor: Colors.white,
-                    child: Text(
-                      membership.club.name.isEmpty
-                          ? '?'
-                          : membership.club.name.characters.first,
-                    ),
+                    child: Text(_firstLetter(membership.club.name)),
                   ),
                   const SizedBox(width: 14),
                   Expanded(
@@ -483,6 +498,16 @@ class _ClubMembershipCard extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  String _firstLetter(String value) {
+    final trimmed = value.trim();
+
+    if (trimmed.isEmpty) {
+      return '?';
+    }
+
+    return trimmed.substring(0, 1).toUpperCase();
   }
 }
 

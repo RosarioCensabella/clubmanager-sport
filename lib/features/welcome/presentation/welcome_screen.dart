@@ -22,7 +22,7 @@ class WelcomeScreen extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             Text(
-              'Club, squadre, convocazioni, presenze, comunicazioni, documenti e quote associative.',
+              'ClubManager Sport è un gestionale per società sportive. Gli accessi vengono creati tramite invito dal club.',
               style: textTheme.bodyLarge?.copyWith(
                 color: const Color(0xFF52616B),
               ),
@@ -30,21 +30,23 @@ class WelcomeScreen extends StatelessWidget {
             const SizedBox(height: 24),
             const _FeatureCard(
               icon: Icons.groups,
-              title: 'Squadre e membri',
-              description: 'Gestisci allenatori, atleti, genitori e ruoli.',
+              title: 'Gestionale multi-club',
+              description:
+                  'Gestisci club, squadre, atleti, staff, genitori e ruoli.',
             ),
             const SizedBox(height: 12),
             const _FeatureCard(
               icon: Icons.event,
-              title: 'Calendario e convocazioni',
-              description: 'Crea allenamenti, partite e raccogli conferme.',
+              title: 'Eventi e operatività',
+              description:
+                  'Crea eventi, convocazioni, presenze, comunicazioni e documenti.',
             ),
             const SizedBox(height: 12),
             const _FeatureCard(
               icon: Icons.verified_user,
-              title: 'Sicurezza e permessi',
+              title: 'Accessi controllati',
               description:
-                  'Accessi separati per admin, coach, genitori e atleti.',
+                  'Nessuna registrazione libera: ogni account nasce da invito.',
             ),
             const SizedBox(height: 28),
             FilledButton(
@@ -52,9 +54,49 @@ class WelcomeScreen extends StatelessWidget {
               child: const Text('Accedi'),
             ),
             const SizedBox(height: 12),
-            OutlinedButton(
-              onPressed: () => context.go('/register'),
-              child: const Text('Crea account'),
+            const _InviteInfoCard(),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _InviteInfoCard extends StatelessWidget {
+  const _InviteInfoCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(
+              Icons.mark_email_read_outlined,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Hai ricevuto un invito?',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Apri il link ricevuto dal tuo club per completare la creazione dell’account o collegare un account esistente.',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: const Color(0xFF52616B),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),

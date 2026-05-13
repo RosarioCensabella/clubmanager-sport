@@ -59,6 +59,15 @@ final GoRouter appRouter = GoRouter(
       builder: (context, state) => const RegisterScreen(),
     ),
     GoRoute(
+      path: '/invite/:token',
+      name: 'invite',
+      builder: (context, state) {
+        final token = state.pathParameters['token'] ?? '';
+
+        return RegisterScreen(invitationToken: token);
+      },
+    ),
+    GoRoute(
       path: '/reset-password',
       name: 'reset-password',
       builder: (context, state) => const ResetPasswordScreen(),

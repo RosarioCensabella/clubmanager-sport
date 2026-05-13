@@ -69,6 +69,26 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
   }
 
+  void _showInviteInfo() {
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Accesso solo su invito'),
+          content: const Text(
+            'Non è possibile registrarsi liberamente. Per creare un account devi ricevere un invito dal club. Se hai già ricevuto un link, aprilo da email o messaggio.',
+          ),
+          actions: [
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Ho capito'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -80,14 +100,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           child: ListView(
             children: [
               Text(
-                'Accedi al tuo club',
+                'Accedi al tuo account',
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                   fontWeight: FontWeight.w800,
                 ),
               ),
               const SizedBox(height: 8),
               Text(
-                'Inserisci email e password per continuare.',
+                'Inserisci email e password. Gli account vengono creati solo tramite invito del club.',
                 style: Theme.of(
                   context,
                 ).textTheme.bodyLarge?.copyWith(color: const Color(0xFF52616B)),
@@ -171,9 +191,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 onPressed: _submit,
               ),
               const SizedBox(height: 16),
-              OutlinedButton(
-                onPressed: _isLoading ? null : () => context.go('/register'),
-                child: const Text('Crea un nuovo account'),
+              OutlinedButton.icon(
+                onPressed: _isLoading ? null : _showInviteInfo,
+                icon: const Icon(Icons.mark_email_read_outlined),
+                label: const Text('Non hai un account? Serve un invito'),
               ),
             ],
           ),

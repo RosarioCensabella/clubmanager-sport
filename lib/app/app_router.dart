@@ -19,6 +19,9 @@ import '../features/documents/presentation/documents_screen.dart';
 import '../features/events/presentation/create_event_screen.dart';
 import '../features/events/presentation/event_detail_screen.dart';
 import '../features/events/presentation/events_screen.dart';
+import '../features/fees/presentation/create_fee_screen.dart';
+import '../features/fees/presentation/fee_detail_screen.dart';
+import '../features/fees/presentation/fees_screen.dart';
 import '../features/members/presentation/create_invitation_screen.dart';
 import '../features/members/presentation/invitations_screen.dart';
 import '../features/splash/presentation/splash_screen.dart';
@@ -177,6 +180,25 @@ final GoRouter appRouter = GoRouter(
       path: '/documents/create',
       name: 'documents-create',
       builder: (context, state) => const CreateDocumentScreen(),
+    ),
+    GoRoute(
+      path: '/fees',
+      name: 'fees',
+      builder: (context, state) => const FeesScreen(),
+    ),
+    GoRoute(
+      path: '/fees/create',
+      name: 'fees-create',
+      builder: (context, state) => const CreateFeeScreen(),
+    ),
+    GoRoute(
+      path: '/fees/:feeId',
+      name: 'fee-detail',
+      builder: (context, state) {
+        final feeId = state.pathParameters['feeId'] ?? '';
+
+        return FeeDetailScreen(feeId: feeId);
+      },
     ),
   ],
 );

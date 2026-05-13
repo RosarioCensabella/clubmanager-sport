@@ -88,6 +88,10 @@ class _ClubContextScreenState extends ConsumerState<ClubContextScreen> {
     context.push('/documents');
   }
 
+  void _goToFees() {
+    context.push('/fees');
+  }
+
   bool get _hasActiveClub => _activeClubId != null && _activeClubId!.isNotEmpty;
 
   @override
@@ -173,6 +177,7 @@ class _ClubContextScreenState extends ConsumerState<ClubContextScreen> {
                         onDocumentsPressed: _hasActiveClub
                             ? _goToDocuments
                             : null,
+                        onFeesPressed: _hasActiveClub ? _goToFees : null,
                       );
                     }
 
@@ -243,7 +248,7 @@ class _HeaderCard extends StatelessWidget {
                   if (!hasActiveClub) ...[
                     const SizedBox(height: 8),
                     Text(
-                      'Seleziona un club per abilitare squadre, atleti, eventi, comunicazioni e documenti.',
+                      'Seleziona un club per abilitare squadre, atleti, eventi, comunicazioni, documenti e quote.',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: const Color(0xFFC62828),
                       ),
@@ -269,6 +274,7 @@ class _QuickActionsCard extends StatelessWidget {
     required this.onEventsPressed,
     required this.onCommunicationsPressed,
     required this.onDocumentsPressed,
+    required this.onFeesPressed,
   });
 
   final bool hasActiveClub;
@@ -279,6 +285,7 @@ class _QuickActionsCard extends StatelessWidget {
   final VoidCallback? onEventsPressed;
   final VoidCallback? onCommunicationsPressed;
   final VoidCallback? onDocumentsPressed;
+  final VoidCallback? onFeesPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -295,6 +302,13 @@ class _QuickActionsCard extends StatelessWidget {
               ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 12),
+            _ActionButton(
+              label: 'Quote associative',
+              icon: Icons.payments_outlined,
+              onPressed: hasActiveClub ? onFeesPressed : null,
+              primary: true,
+            ),
+            const SizedBox(height: 8),
             _ActionButton(
               label: 'Documenti e scadenze',
               icon: Icons.folder_copy_outlined,

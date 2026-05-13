@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/utils/app_result.dart';
 import '../../../core/widgets/app_error_view.dart';
@@ -33,6 +34,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     setState(() {
       _future = _loadPreferences();
     });
+  }
+
+  void _goToPrivacy() {
+    context.push('/privacy');
   }
 
   Future<void> _save(NotificationPreferences preferences) async {
@@ -142,7 +147,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       onInfoPressed: _showOperationalInfo,
                     ),
                     const SizedBox(height: 12),
-                    _PrivacyInfoCard(),
+                    _PrivacyAccountCard(onPressed: _goToPrivacy),
+                    const SizedBox(height: 12),
+                    const _PrivacyInfoCard(),
                   ],
                 ),
               );
@@ -185,7 +192,7 @@ class _HeaderCard extends StatelessWidget {
                   Text(
                     isSaving
                         ? 'Salvataggio in corso...'
-                        : 'Gestisci notifiche e preferenze operative.',
+                        : 'Gestisci notifiche, privacy e preferenze operative.',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: const Color(0xFF52616B),
                     ),
@@ -330,7 +337,33 @@ class _NotificationSettingsCard extends StatelessWidget {
   }
 }
 
+class _PrivacyAccountCard extends StatelessWidget {
+  const _PrivacyAccountCard({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: ListTile(
+        leading: Icon(
+          Icons.privacy_tip_outlined,
+          color: Theme.of(context).colorScheme.primary,
+        ),
+        title: const Text('Privacy e account'),
+        subtitle: const Text(
+          'Informazioni privacy e richiesta eliminazione account.',
+        ),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: onPressed,
+      ),
+    );
+  }
+}
+
 class _PrivacyInfoCard extends StatelessWidget {
+  const _PrivacyInfoCard();
+
   @override
   Widget build(BuildContext context) {
     return const Card(

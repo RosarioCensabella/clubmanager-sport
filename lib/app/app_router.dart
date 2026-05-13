@@ -34,6 +34,7 @@ import '../features/support/presentation/support_screen.dart';
 import '../features/teams/presentation/create_team_screen.dart';
 import '../features/teams/presentation/teams_screen.dart';
 import '../features/welcome/presentation/welcome_screen.dart';
+import '../features/members/presentation/invitation_acceptance_screen.dart';
 
 final GoRouter appRouter = GoRouter(
   initialLocation: '/',
@@ -58,15 +59,17 @@ final GoRouter appRouter = GoRouter(
       name: 'register',
       builder: (context, state) => const RegisterScreen(),
     ),
+
     GoRoute(
       path: '/invite/:token',
       name: 'invite',
       builder: (context, state) {
         final token = state.pathParameters['token'] ?? '';
 
-        return RegisterScreen(invitationToken: token);
+        return InvitationAcceptanceScreen(token: token);
       },
     ),
+
     GoRoute(
       path: '/reset-password',
       name: 'reset-password',

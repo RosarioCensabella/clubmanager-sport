@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart' hide AuthUser;
 import '../../../core/services/supabase_service.dart';
 import '../../../core/utils/app_result.dart';
 import '../domain/create_invitation_request.dart';
+import '../domain/invitation_acceptance.dart';
 import '../domain/invitation_summary.dart';
 
 class InvitationRepository {
@@ -52,6 +53,81 @@ class InvitationRepository {
       return const AppFailure(
         'Impossibile caricare gli inviti.',
         code: 'invitations_load_error',
+      );
+    }
+  }
+
+  Future<AppResult<InvitationAcceptance>> fetchInvitationByToken({
+    required String token,
+  }) async {
+    if (!SupabaseService.isConfigured) {
+      return const AppFailure(
+        'Supabase non è configurato.',
+        code: 'supabase_not_configured',
+      );
+    }
+
+    if (token.trim().isEmpty) {
+      return const AppFailure(
+        'Token invito non valido.',
+        code: 'invalid_invitation_token',
+      );
+    }
+
+    try {
+      final data = await _client.rpc(
+        'get_invitation_by_token',
+        params: {'invitation_token': token.trim()},
+      );
+
+      final rows = List<Map<String, dynamic>>.from(data);
+
+      if (rows.isEmpty) {
+        return const AppFailure(
+          'Invito non trovato o non più disponibile.',
+          code: 'invitation_not_found',
+        );
+      }
+
+      return AppSuccess(InvitationAcceptance.fromMap(rows.first));
+    } on PostgrestException catch (error) {
+      return AppFailure(error.message, code: error.code);
+    } catch (_) {
+      return const AppFailure(
+        'Impossibile verificare l’invito.',
+        code: 'invitation_lookup_error',
+      );
+    }
+  }
+
+  Future<AppResult<void>> acceptInvitation({required String token}) async {
+    if (!SupabaseService.isConfigured) {
+      return const AppFailure(
+        'Supabase non è configurato.',
+        code: 'supabase_not_configured',
+      );
+    }
+
+    if (token.trim().isEmpty) {
+      return const AppFailure(
+        'Token invito non valido.',
+        code: 'invalid_invitation_token',
+      );
+    }
+
+    try {
+      await _client.rpc(
+        'accept_invitation',
+        params: {'invitation_token': token.trim()},
+      );
+
+      return const AppSuccess(null);
+    } on PostgrestException catch (error) {
+      return AppFailure(error.message, code: error.code);
+    } catch (_) {
+      return const AppFailure(
+        'Impossibile accettare l’invito.',
+        code: 'invitation_accept_error',
       );
     }
   }
@@ -122,7 +198,10 @@ class InvitationRepository {
     try {
       await _client
           .from('invitations')
-          .update({'status': 'revoked'})
+          .update({
+            'status': 'revoked',
+            'revoked_at': DateTime.now().toUtc().toIso8601String(),
+          })
           .eq('id', invitationId);
 
       return const AppSuccess(null);

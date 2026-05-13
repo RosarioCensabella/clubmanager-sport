@@ -25,6 +25,8 @@ class AuthController {
 
   final AuthRepository _repository;
 
+  AppAuthUser? get currentUser => _repository.currentUser;
+
   Future<AppResult<AppAuthUser>> signIn({
     required String email,
     required String password,

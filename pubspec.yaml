@@ -38,8 +38,8 @@ dependencies:
   go_router: ^17.2.3
   supabase_flutter: ^2.12.4
   sentry_flutter: ^9.20.0
-  firebase_core: ^4.7.0
-  firebase_messaging: ^16.2.0
+  firebase_core: ^4.8.0
+  firebase_messaging: ^16.2.1
   flutter_local_notifications: ^20.1.0
   intl: ^0.20.2
   url_launcher: ^6.3.2

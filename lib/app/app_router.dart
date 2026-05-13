@@ -30,6 +30,7 @@ import '../features/privacy/presentation/privacy_screen.dart';
 import '../features/profile/presentation/profile_screen.dart';
 import '../features/settings/presentation/settings_screen.dart';
 import '../features/splash/presentation/splash_screen.dart';
+import '../features/support/presentation/support_screen.dart';
 import '../features/teams/presentation/create_team_screen.dart';
 import '../features/teams/presentation/teams_screen.dart';
 import '../features/welcome/presentation/welcome_screen.dart';
@@ -90,6 +91,11 @@ final GoRouter appRouter = GoRouter(
 
         return LegalDocumentScreen(documentId: documentId);
       },
+    ),
+    GoRoute(
+      path: '/support',
+      name: 'support',
+      builder: (context, state) => const SupportScreen(),
     ),
     GoRoute(
       path: '/club-context',

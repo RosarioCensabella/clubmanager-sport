@@ -44,6 +44,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     context.push('/legal');
   }
 
+  void _goToSupport() {
+    context.push('/support');
+  }
+
   Future<void> _save(NotificationPreferences preferences) async {
     if (_isSaving) {
       return;
@@ -151,6 +155,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       onInfoPressed: _showOperationalInfo,
                     ),
                     const SizedBox(height: 12),
+                    _SupportCard(onPressed: _goToSupport),
+                    const SizedBox(height: 12),
                     _LegalCard(onPressed: _goToLegal),
                     const SizedBox(height: 12),
                     _PrivacyAccountCard(onPressed: _goToPrivacy),
@@ -198,7 +204,7 @@ class _HeaderCard extends StatelessWidget {
                   Text(
                     isSaving
                         ? 'Salvataggio in corso...'
-                        : 'Gestisci notifiche, privacy e preferenze operative.',
+                        : 'Gestisci notifiche, supporto, privacy e preferenze operative.',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: const Color(0xFF52616B),
                     ),
@@ -338,6 +344,30 @@ class _NotificationSettingsCard extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _SupportCard extends StatelessWidget {
+  const _SupportCard({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: ListTile(
+        leading: Icon(
+          Icons.support_agent_outlined,
+          color: Theme.of(context).colorScheme.primary,
+        ),
+        title: const Text('Supporto e diagnostica'),
+        subtitle: const Text(
+          'Email supporto, versione app e informazioni tecniche.',
+        ),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: onPressed,
       ),
     );
   }

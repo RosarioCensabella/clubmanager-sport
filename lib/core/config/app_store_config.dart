@@ -7,11 +7,14 @@ class AppStoreConfig {
 
   static const String developerName = 'ClubManager Sport';
 
-  static const String privacyPolicyUrl = '';
+  static const String privacyPolicyUrl =
+      'https://RosarioCensabella.github.io/clubmanager-sport-legal-pages/privacy-policy.html';
 
-  static const String termsOfServiceUrl = '';
+  static const String termsOfServiceUrl =
+      'https://RosarioCensabella.github.io/clubmanager-sport-legal-pages/terms-of-service.html';
 
-  static const String accountDeletionRequestUrl = '';
+  static const String accountDeletionRequestUrl =
+      'https://RosarioCensabella.github.io/clubmanager-sport-legal-pages/account-deletion.html';
 
   static bool get hasPublicPrivacyPolicyUrl {
     return privacyPolicyUrl.trim().isNotEmpty;

@@ -65,6 +65,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     _marketingConsent = profile.marketingConsent;
   }
 
+  void _goToSettings() {
+    context.push('/settings');
+  }
+
   Future<void> _save() async {
     final isValid = _formKey.currentState?.validate() ?? false;
 
@@ -201,6 +205,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         title: const Text('Profilo utente'),
         actions: [
           IconButton(
+            tooltip: 'Impostazioni',
+            onPressed: _goToSettings,
+            icon: const Icon(Icons.settings_outlined),
+          ),
+          IconButton(
             tooltip: 'Aggiorna',
             onPressed: _reload,
             icon: const Icon(Icons.refresh),
@@ -237,6 +246,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   child: ListView(
                     children: [
                       _ProfileHeader(profile: data),
+                      const SizedBox(height: 16),
+                      FilledButton.icon(
+                        onPressed: _isSaving || _isSigningOut
+                            ? null
+                            : _goToSettings,
+                        icon: const Icon(Icons.settings_outlined),
+                        label: const Text('Impostazioni notifiche'),
+                      ),
                       const SizedBox(height: 24),
                       Text(
                         'Dati personali',

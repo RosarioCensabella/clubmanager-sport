@@ -35,6 +35,7 @@ import '../features/teams/presentation/create_team_screen.dart';
 import '../features/teams/presentation/teams_screen.dart';
 import '../features/welcome/presentation/welcome_screen.dart';
 import '../features/members/presentation/invitation_acceptance_screen.dart';
+import '../features/clubs/presentation/club_workspace_screen.dart';
 
 final GoRouter appRouter = GoRouter(
   initialLocation: '/',
@@ -119,6 +120,17 @@ final GoRouter appRouter = GoRouter(
       name: 'clubs-create',
       builder: (context, state) => const CreateClubScreen(),
     ),
+
+    GoRoute(
+      path: '/clubs/:clubId/workspace',
+      name: 'club-workspace',
+      builder: (context, state) {
+        final clubId = state.pathParameters['clubId'] ?? '';
+
+        return ClubWorkspaceScreen(clubId: clubId);
+      },
+    ),
+
     GoRoute(
       path: '/teams',
       name: 'teams',

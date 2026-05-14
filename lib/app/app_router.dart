@@ -40,6 +40,7 @@ import '../features/teams/presentation/teams_screen.dart';
 import '../features/welcome/presentation/welcome_screen.dart';
 import '../features/teams/presentation/edit_team_screen.dart';
 import '../features/teams/presentation/team_detail_screen.dart';
+import '../features/athletes/presentation/edit_athlete_screen.dart';
 
 final GoRouter appRouter = GoRouter(
   initialLocation: '/',
@@ -179,7 +180,6 @@ final GoRouter appRouter = GoRouter(
       },
     ),
 
-
     GoRoute(
       path: '/invitations',
       name: 'invitations',
@@ -200,6 +200,17 @@ final GoRouter appRouter = GoRouter(
       name: 'athletes-create',
       builder: (context, state) => const CreateAthleteScreen(),
     ),
+
+    GoRoute(
+      path: '/athletes/:athleteId/edit',
+      name: 'athlete-edit',
+      builder: (context, state) {
+        final athleteId = state.pathParameters['athleteId'] ?? '';
+
+        return EditAthleteScreen(athleteId: athleteId);
+      },
+    ),
+
     GoRoute(
       path: '/athletes/:athleteId',
       name: 'athlete-detail',

@@ -22,6 +22,9 @@ class AthleteDetailScreen extends ConsumerStatefulWidget {
 class _AthleteDetailScreenState extends ConsumerState<AthleteDetailScreen> {
   late Future<AppResult<_AthleteDetailData>> _future;
 
+  bool _isArchiving = false;
+  bool _isLinkingAccount = false;
+
   @override
   void initState() {
     super.initState();
@@ -39,9 +42,7 @@ class _AthleteDetailScreenState extends ConsumerState<AthleteDetailScreen> {
       case AppFailure(:final message, :final code):
         return AppFailure(message, code: code);
 
-      case AppSuccess(:final data):
-        final athlete = data;
-
+      case AppSuccess(data: final athlete):
         final relationsResult = await repository.fetchParentRelations(
           athleteId: widget.athleteId,
         );
@@ -50,9 +51,7 @@ class _AthleteDetailScreenState extends ConsumerState<AthleteDetailScreen> {
           case AppFailure(:final message, :final code):
             return AppFailure(message, code: code);
 
-          case AppSuccess(:final data):
-            final relations = data;
-
+          case AppSuccess(data: final relations):
             return AppSuccess(
               _AthleteDetailData(athlete: athlete, parentRelations: relations),
             );
@@ -66,16 +65,184 @@ class _AthleteDetailScreenState extends ConsumerState<AthleteDetailScreen> {
     });
   }
 
+  void _goToEdit() {
+    context.push('/athletes/${widget.athleteId}/edit').then((_) => _reload());
+  }
+
   void _goToLinkParent() {
     context
         .push('/athletes/${widget.athleteId}/parents/link')
         .then((_) => _reload());
   }
 
+  void _goToInvitations() {
+    context.push('/invitations/create');
+  }
+
+  Future<void> _linkAthleteAccount(AthleteSummary athlete) async {
+    final emailController = TextEditingController();
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Collega account atleta'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Inserisci l’email dell’account da collegare a ${athlete.fullName}.',
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: emailController,
+                keyboardType: TextInputType.emailAddress,
+                decoration: const InputDecoration(
+                  labelText: 'Email account atleta',
+                  helperText:
+                      'L’account deve esistere. Se non esiste, crea prima un invito come atleta.',
+                  prefixIcon: Icon(Icons.email_outlined),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Annulla'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text('Collega'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed != true || !mounted) {
+      emailController.dispose();
+      return;
+    }
+
+    setState(() {
+      _isLinkingAccount = true;
+    });
+
+    final result = await ref
+        .read(athleteRepositoryProvider)
+        .linkAthleteAccountByEmail(
+          athleteId: widget.athleteId,
+          email: emailController.text,
+        );
+
+    emailController.dispose();
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _isLinkingAccount = false;
+    });
+
+    switch (result) {
+      case AppSuccess():
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Account atleta collegato.')),
+        );
+        _reload();
+
+      case AppFailure(:final message):
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(message)));
+    }
+  }
+
+  Future<void> _confirmArchive(AthleteSummary athlete) async {
+    final reasonController = TextEditingController();
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Archivia atleta'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Archiviando “${athlete.fullName}” l’atleta verrà tolto dalle liste operative. Lo storico resterà conservato.',
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: reasonController,
+                decoration: const InputDecoration(
+                  labelText: 'Motivo facoltativo',
+                  prefixIcon: Icon(Icons.notes_outlined),
+                ),
+                maxLines: 2,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Annulla'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text('Archivia'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed != true || !mounted) {
+      reasonController.dispose();
+      return;
+    }
+
+    setState(() {
+      _isArchiving = true;
+    });
+
+    final result = await ref
+        .read(athleteRepositoryProvider)
+        .archiveAthlete(
+          athleteId: widget.athleteId,
+          reason: reasonController.text,
+        );
+
+    reasonController.dispose();
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _isArchiving = false;
+    });
+
+    switch (result) {
+      case AppSuccess():
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Atleta archiviato correttamente.')),
+        );
+        context.go('/athletes');
+
+      case AppFailure(:final message):
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(message)));
+    }
+  }
+
   Future<void> _removeRelation(ParentRelationSummary relation) async {
     final shouldRemove = await showDialog<bool>(
       context: context,
-      builder: (context) {
+      builder: (dialogContext) {
         return AlertDialog(
           title: const Text('Rimuovere collegamento?'),
           content: Text(
@@ -83,11 +250,11 @@ class _AthleteDetailScreenState extends ConsumerState<AthleteDetailScreen> {
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
+              onPressed: () => Navigator.of(dialogContext).pop(false),
               child: const Text('Annulla'),
             ),
             FilledButton(
-              onPressed: () => Navigator.of(context).pop(true),
+              onPressed: () => Navigator.of(dialogContext).pop(true),
               child: const Text('Rimuovi'),
             ),
           ],
@@ -123,74 +290,94 @@ class _AthleteDetailScreenState extends ConsumerState<AthleteDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: FutureBuilder<AppResult<_AthleteDetailData>>(
-        future: _future,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState != ConnectionState.done) {
-            return const Scaffold(
-              body: AppLoadingView(message: 'Caricamento dettaglio atleta...'),
-            );
-          }
+    return FutureBuilder<AppResult<_AthleteDetailData>>(
+      future: _future,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const Scaffold(
+            body: AppLoadingView(message: 'Caricamento dettaglio atleta...'),
+          );
+        }
 
-          final result = snapshot.data;
+        final result = snapshot.data;
 
-          if (result == null) {
+        if (result == null) {
+          return Scaffold(
+            appBar: AppBar(title: const Text('Dettaglio atleta')),
+            body: AppErrorView(
+              message: 'Risposta non valida durante il caricamento.',
+              onRetry: _reload,
+            ),
+          );
+        }
+
+        switch (result) {
+          case AppFailure(:final message):
             return Scaffold(
               appBar: AppBar(title: const Text('Dettaglio atleta')),
-              body: AppErrorView(
-                message: 'Risposta non valida durante il caricamento.',
-                onRetry: _reload,
-              ),
+              body: AppErrorView(message: message, onRetry: _reload),
             );
-          }
 
-          switch (result) {
-            case AppFailure(:final message):
-              return Scaffold(
-                appBar: AppBar(title: const Text('Dettaglio atleta')),
-                body: AppErrorView(message: message, onRetry: _reload),
-              );
+          case AppSuccess(data: final data):
+            final athlete = data.athlete;
 
-            case AppSuccess(:final data):
-              return Scaffold(
-                appBar: AppBar(
-                  title: Text(data.athlete.fullName),
-                  actions: [
-                    IconButton(
-                      tooltip: 'Collega genitore/tutore',
-                      onPressed: _goToLinkParent,
-                      icon: const Icon(Icons.family_restroom_outlined),
+            return Scaffold(
+              appBar: AppBar(
+                title: Text(athlete.fullName),
+                actions: [
+                  IconButton(
+                    tooltip: 'Modifica atleta',
+                    onPressed: _goToEdit,
+                    icon: const Icon(Icons.edit_outlined),
+                  ),
+                  IconButton(
+                    tooltip: 'Collega genitore/tutore',
+                    onPressed: _goToLinkParent,
+                    icon: const Icon(Icons.family_restroom_outlined),
+                  ),
+                ],
+              ),
+              body: RefreshIndicator(
+                onRefresh: () async {
+                  _reload();
+                  await _future;
+                },
+                child: ListView(
+                  padding: const EdgeInsets.all(24),
+                  children: [
+                    _AthleteInfoCard(athlete: athlete),
+                    const SizedBox(height: 12),
+                    _AccountLinkCard(
+                      athlete: athlete,
+                      isLoading: _isLinkingAccount,
+                      onLinkPressed: () => _linkAthleteAccount(athlete),
+                      onInvitePressed: _goToInvitations,
+                    ),
+                    const SizedBox(height: 12),
+                    _ParentsCard(
+                      relations: data.parentRelations,
+                      onAddPressed: _goToLinkParent,
+                      onRemovePressed: _removeRelation,
+                    ),
+                    const SizedBox(height: 12),
+                    _AdministrativeActionsCard(
+                      isArchiving: _isArchiving,
+                      onEditPressed: _goToEdit,
+                      onArchivePressed: athlete.active
+                          ? () => _confirmArchive(athlete)
+                          : null,
                     ),
                   ],
                 ),
-                body: RefreshIndicator(
-                  onRefresh: () async {
-                    _reload();
-                    await _future;
-                  },
-                  child: ListView(
-                    padding: const EdgeInsets.all(24),
-                    children: [
-                      _AthleteInfoCard(athlete: data.athlete),
-                      const SizedBox(height: 12),
-                      _ParentsCard(
-                        relations: data.parentRelations,
-                        onAddPressed: _goToLinkParent,
-                        onRemovePressed: _removeRelation,
-                      ),
-                    ],
-                  ),
-                ),
-                floatingActionButton: FloatingActionButton.extended(
-                  onPressed: _goToLinkParent,
-                  icon: const Icon(Icons.family_restroom_outlined),
-                  label: const Text('Collega tutore'),
-                ),
-              );
-          }
-        },
-      ),
+              ),
+              floatingActionButton: FloatingActionButton.extended(
+                onPressed: _goToEdit,
+                icon: const Icon(Icons.edit_outlined),
+                label: const Text('Modifica'),
+              ),
+            );
+        }
+      },
     );
   }
 }
@@ -250,6 +437,39 @@ class _AthleteInfoCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 18),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                Chip(
+                  label: Text(athlete.active ? 'Attivo' : 'Non attivo'),
+                  avatar: Icon(
+                    athlete.active
+                        ? Icons.check_circle_outline
+                        : Icons.archive_outlined,
+                    size: 18,
+                  ),
+                ),
+                Chip(
+                  label: Text(athlete.medicalCertificateStatusLabel),
+                  avatar: const Icon(
+                    Icons.medical_information_outlined,
+                    size: 18,
+                  ),
+                ),
+                if (athlete.userId != null && athlete.userId!.isNotEmpty)
+                  const Chip(
+                    label: Text('Account collegato'),
+                    avatar: Icon(Icons.verified_user_outlined, size: 18),
+                  )
+                else
+                  const Chip(
+                    label: Text('Account non collegato'),
+                    avatar: Icon(Icons.link_off_outlined, size: 18),
+                  ),
+              ],
+            ),
+            const Divider(height: 28),
             _InfoRow(
               label: 'Data di nascita',
               value: athlete.dateOfBirth == null
@@ -269,6 +489,12 @@ class _AthleteInfoCard extends StatelessWidget {
                   : 'Non indicato',
             ),
             _InfoRow(
+              label: 'Squadra',
+              value: athlete.teamName?.isNotEmpty == true
+                  ? athlete.teamName!
+                  : 'Nessuna squadra',
+            ),
+            _InfoRow(
               label: 'Certificato medico',
               value: athlete.medicalCertificateStatusLabel,
             ),
@@ -277,6 +503,12 @@ class _AthleteInfoCard extends StatelessWidget {
               value: athlete.medicalCertificateExpiry == null
                   ? 'Non indicata'
                   : _formatDate(athlete.medicalCertificateExpiry!),
+            ),
+            _InfoRow(
+              label: 'Account atleta',
+              value: athlete.userId?.isNotEmpty == true
+                  ? 'Collegato'
+                  : 'Non collegato',
             ),
             if (athlete.staffNotes != null &&
                 athlete.staffNotes!.trim().isNotEmpty) ...[
@@ -305,6 +537,82 @@ class _AthleteInfoCard extends StatelessWidget {
     final year = value.year.toString().padLeft(4, '0');
 
     return '$day/$month/$year';
+  }
+}
+
+class _AccountLinkCard extends StatelessWidget {
+  const _AccountLinkCard({
+    required this.athlete,
+    required this.isLoading,
+    required this.onLinkPressed,
+    required this.onInvitePressed,
+  });
+
+  final AthleteSummary athlete;
+  final bool isLoading;
+  final VoidCallback onLinkPressed;
+  final VoidCallback onInvitePressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final hasAccount = athlete.userId != null && athlete.userId!.isNotEmpty;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  hasAccount
+                      ? Icons.verified_user_outlined
+                      : Icons.link_outlined,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Account atleta',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Text(
+              hasAccount
+                  ? 'Questo atleta è già collegato a un account utente. Quando l’utente accede, potrà vedere le informazioni collegate al suo profilo atleta.'
+                  : 'Collega l’atleta a un account utente esistente. Se l’account non esiste, crea prima un invito con ruolo atleta.',
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: const Color(0xFF52616B)),
+            ),
+            const SizedBox(height: 12),
+            FilledButton.icon(
+              onPressed: isLoading ? null : onLinkPressed,
+              icon: const Icon(Icons.link_outlined),
+              label: Text(
+                isLoading
+                    ? 'Collegamento...'
+                    : hasAccount
+                    ? 'Cambia account collegato'
+                    : 'Collega account atleta',
+              ),
+            ),
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              onPressed: onInvitePressed,
+              icon: const Icon(Icons.person_add_alt_1_outlined),
+              label: const Text('Crea invito atleta'),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
@@ -376,6 +684,57 @@ class _ParentsCard extends StatelessWidget {
                 ),
                 if (relation != relations.last) const Divider(),
               ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AdministrativeActionsCard extends StatelessWidget {
+  const _AdministrativeActionsCard({
+    required this.isArchiving,
+    required this.onEditPressed,
+    required this.onArchivePressed,
+  });
+
+  final bool isArchiving;
+  final VoidCallback onEditPressed;
+  final VoidCallback? onArchivePressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'Azioni amministrative',
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900),
+            ),
+            const SizedBox(height: 12),
+            FilledButton.icon(
+              onPressed: onEditPressed,
+              icon: const Icon(Icons.edit_outlined),
+              label: const Text('Modifica atleta'),
+            ),
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              onPressed: isArchiving ? null : onArchivePressed,
+              icon: const Icon(Icons.archive_outlined),
+              label: Text(isArchiving ? 'Archiviazione...' : 'Archivia atleta'),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'L’archiviazione toglie l’atleta dalle liste operative ma mantiene lo storico.',
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: const Color(0xFF52616B)),
+            ),
           ],
         ),
       ),

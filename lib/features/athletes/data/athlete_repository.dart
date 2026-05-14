@@ -5,6 +5,7 @@ import '../../../core/utils/app_result.dart';
 import '../domain/athlete_summary.dart';
 import '../domain/create_athlete_request.dart';
 import '../domain/parent_relation_summary.dart';
+import '../domain/update_athlete_request.dart';
 
 class AthleteRepository {
   AthleteRepository();
@@ -75,7 +76,14 @@ class AthleteRepository {
             'id, club_id, user_id, team_id, first_name, last_name, date_of_birth, jersey_number, sport_role, active, medical_certificate_status, medical_certificate_expiry, staff_notes, teams(id, name)',
           )
           .eq('id', athleteId)
-          .single();
+          .maybeSingle();
+
+      if (data == null) {
+        return const AppFailure(
+          'Atleta non trovato o non disponibile.',
+          code: 'athlete_not_found',
+        );
+      }
 
       return AppSuccess(
         AthleteSummary.fromMap(Map<String, dynamic>.from(data)),
@@ -121,14 +129,12 @@ class AthleteRepository {
         );
       }
 
-      if (request.teamId != null && request.teamId!.trim().isNotEmpty) {
-        await _client.from('team_memberships').insert({
-          'team_id': request.teamId,
-          'athlete_profile_id': athleteId,
-          'role': 'athlete',
-          'status': 'active',
-        });
-      }
+      await _syncTeamMembership(
+        athleteId: athleteId,
+        oldTeamId: null,
+        newTeamId: request.teamId,
+        userId: null,
+      );
 
       return AppSuccess(athleteId);
     } on PostgrestException catch (error) {
@@ -139,6 +145,304 @@ class AthleteRepository {
         code: 'athlete_create_error',
       );
     }
+  }
+
+  Future<AppResult<void>> updateAthlete({
+    required String athleteId,
+    required UpdateAthleteRequest request,
+  }) async {
+    if (!SupabaseService.isConfigured) {
+      return const AppFailure(
+        'Supabase non è configurato.',
+        code: 'supabase_not_configured',
+      );
+    }
+
+    if (athleteId.trim().isEmpty) {
+      return const AppFailure('Atleta non valido.', code: 'invalid_athlete_id');
+    }
+
+    final athleteResult = await fetchAthleteById(athleteId: athleteId);
+
+    switch (athleteResult) {
+      case AppFailure(:final message, :final code):
+        return AppFailure(message, code: code);
+
+      case AppSuccess(:final data):
+        try {
+          await _client
+              .from('athlete_profiles')
+              .update(request.toUpdateMap())
+              .eq('id', athleteId);
+
+          await _syncTeamMembership(
+            athleteId: athleteId,
+            oldTeamId: data.teamId,
+            newTeamId: request.teamId,
+            userId: data.userId,
+          );
+
+          return const AppSuccess(null);
+        } on PostgrestException catch (error) {
+          return AppFailure(error.message, code: error.code);
+        } catch (_) {
+          return const AppFailure(
+            'Impossibile aggiornare l’atleta.',
+            code: 'athlete_update_error',
+          );
+        }
+    }
+  }
+
+  Future<AppResult<void>> archiveAthlete({
+    required String athleteId,
+    String? reason,
+  }) async {
+    if (!SupabaseService.isConfigured) {
+      return const AppFailure(
+        'Supabase non è configurato.',
+        code: 'supabase_not_configured',
+      );
+    }
+
+    final user = _client.auth.currentUser;
+
+    if (user == null) {
+      return const AppFailure(
+        'Devi effettuare l’accesso per archiviare l’atleta.',
+        code: 'not_authenticated',
+      );
+    }
+
+    if (athleteId.trim().isEmpty) {
+      return const AppFailure('Atleta non valido.', code: 'invalid_athlete_id');
+    }
+
+    final now = DateTime.now().toUtc().toIso8601String();
+
+    try {
+      await _client
+          .from('athlete_profiles')
+          .update({
+            'active': false,
+            'deleted_at': now,
+            'archived_at': now,
+            'archived_by': user.id,
+            'archive_reason': _nullableTrim(reason),
+          })
+          .eq('id', athleteId);
+
+      await _client
+          .from('team_memberships')
+          .update({'status': 'removed'})
+          .eq('athlete_profile_id', athleteId)
+          .eq('role', 'athlete');
+
+      return const AppSuccess(null);
+    } on PostgrestException catch (error) {
+      return AppFailure(error.message, code: error.code);
+    } catch (_) {
+      return const AppFailure(
+        'Impossibile archiviare l’atleta.',
+        code: 'athlete_archive_error',
+      );
+    }
+  }
+
+  Future<AppResult<String>> linkAthleteAccountByEmail({
+    required String athleteId,
+    required String email,
+  }) async {
+    if (!SupabaseService.isConfigured) {
+      return const AppFailure(
+        'Supabase non è configurato.',
+        code: 'supabase_not_configured',
+      );
+    }
+
+    if (athleteId.trim().isEmpty) {
+      return const AppFailure('Atleta non valido.', code: 'invalid_athlete_id');
+    }
+
+    final normalizedEmail = email.trim().toLowerCase();
+
+    if (normalizedEmail.isEmpty) {
+      return const AppFailure(
+        'Email account atleta mancante.',
+        code: 'missing_athlete_email',
+      );
+    }
+
+    final athleteResult = await fetchAthleteById(athleteId: athleteId);
+
+    switch (athleteResult) {
+      case AppFailure(:final message, :final code):
+        return AppFailure(message, code: code);
+
+      case AppSuccess(:final data):
+        try {
+          final profilesData = await _client
+              .from('profiles')
+              .select('id, email, first_name, last_name')
+              .eq('email', normalizedEmail)
+              .limit(1);
+
+          final profiles = List<Map<String, dynamic>>.from(profilesData);
+
+          if (profiles.isEmpty) {
+            return const AppFailure(
+              'Account non trovato. Invita prima l’atleta e riprova dopo la registrazione tramite invito.',
+              code: 'athlete_profile_not_found',
+            );
+          }
+
+          final userId = (profiles.first['id'] ?? '').toString();
+
+          if (userId.isEmpty) {
+            return const AppFailure(
+              'Profilo account atleta non valido.',
+              code: 'invalid_athlete_profile',
+            );
+          }
+
+          await _client
+              .from('athlete_profiles')
+              .update({'user_id': userId, 'active': true})
+              .eq('id', athleteId);
+
+          await _ensureClubMembership(clubId: data.clubId, userId: userId);
+
+          await _syncTeamMembership(
+            athleteId: athleteId,
+            oldTeamId: data.teamId,
+            newTeamId: data.teamId,
+            userId: userId,
+          );
+
+          return AppSuccess(userId);
+        } on PostgrestException catch (error) {
+          return AppFailure(error.message, code: error.code);
+        } catch (_) {
+          return const AppFailure(
+            'Impossibile collegare l’account atleta.',
+            code: 'athlete_account_link_error',
+          );
+        }
+    }
+  }
+
+  Future<void> _ensureClubMembership({
+    required String clubId,
+    required String userId,
+  }) async {
+    final membershipsData = await _client
+        .from('club_memberships')
+        .select('id, role, status')
+        .eq('club_id', clubId)
+        .eq('user_id', userId)
+        .limit(1);
+
+    final memberships = List<Map<String, dynamic>>.from(membershipsData);
+
+    if (memberships.isNotEmpty) {
+      final membershipId = (memberships.first['id'] ?? '').toString();
+
+      if (membershipId.isNotEmpty) {
+        await _client
+            .from('club_memberships')
+            .update({'status': 'active'})
+            .eq('id', membershipId);
+      }
+
+      return;
+    }
+
+    await _client.from('club_memberships').insert({
+      'club_id': clubId,
+      'user_id': userId,
+      'role': 'athlete',
+      'status': 'active',
+    });
+  }
+
+  Future<void> _syncTeamMembership({
+    required String athleteId,
+    required String? oldTeamId,
+    required String? newTeamId,
+    required String? userId,
+  }) async {
+    final oldTeam = _nullableTrim(oldTeamId);
+    final newTeam = _nullableTrim(newTeamId);
+    final linkedUserId = _nullableTrim(userId);
+
+    if (oldTeam != null && oldTeam != newTeam) {
+      await _client
+          .from('team_memberships')
+          .delete()
+          .eq('team_id', oldTeam)
+          .eq('athlete_profile_id', athleteId)
+          .eq('role', 'athlete');
+    }
+
+    if (newTeam == null) {
+      return;
+    }
+
+    final byAthleteData = await _client
+        .from('team_memberships')
+        .select('id')
+        .eq('team_id', newTeam)
+        .eq('athlete_profile_id', athleteId)
+        .eq('role', 'athlete')
+        .limit(1);
+
+    final byAthlete = List<Map<String, dynamic>>.from(byAthleteData);
+
+    if (byAthlete.isNotEmpty) {
+      final membershipId = (byAthlete.first['id'] ?? '').toString();
+
+      if (membershipId.isNotEmpty) {
+        await _client
+            .from('team_memberships')
+            .update({'user_id': linkedUserId, 'status': 'active'})
+            .eq('id', membershipId);
+      }
+
+      return;
+    }
+
+    if (linkedUserId != null) {
+      final byUserData = await _client
+          .from('team_memberships')
+          .select('id')
+          .eq('team_id', newTeam)
+          .eq('user_id', linkedUserId)
+          .eq('role', 'athlete')
+          .limit(1);
+
+      final byUser = List<Map<String, dynamic>>.from(byUserData);
+
+      if (byUser.isNotEmpty) {
+        final membershipId = (byUser.first['id'] ?? '').toString();
+
+        if (membershipId.isNotEmpty) {
+          await _client
+              .from('team_memberships')
+              .update({'athlete_profile_id': athleteId, 'status': 'active'})
+              .eq('id', membershipId);
+        }
+
+        return;
+      }
+    }
+
+    await _client.from('team_memberships').insert({
+      'team_id': newTeam,
+      'user_id': linkedUserId,
+      'athlete_profile_id': athleteId,
+      'role': 'athlete',
+      'status': 'active',
+    });
   }
 
   Future<AppResult<List<ParentRelationSummary>>> fetchParentRelations({
@@ -333,5 +637,15 @@ class AthleteRepository {
         code: 'parent_relation_delete_error',
       );
     }
+  }
+
+  static String? _nullableTrim(String? value) {
+    final trimmed = value?.trim();
+
+    if (trimmed == null || trimmed.isEmpty) {
+      return null;
+    }
+
+    return trimmed;
   }
 }

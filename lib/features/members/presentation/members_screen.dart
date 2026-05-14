@@ -60,45 +60,76 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
   }
 
   void _goToInvitations() {
-    context.push('/invitations').then((_) => _reload());
+    context.push('/invitations').then((_) {
+      if (!mounted) {
+        return;
+      }
+
+      _reload();
+    });
   }
 
   void _goToCreateInvitation() {
-    context.push('/invitations/create').then((_) => _reload());
+    context.push('/invitations/create').then((_) {
+      if (!mounted) {
+        return;
+      }
+
+      _reload();
+    });
   }
 
   void _goToAssignTeam() {
     context.push('/members/assign-team').then((result) {
-      if (result == true && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Assegnazione squadra aggiornata.')),
-        );
-        _reload();
+      if (!mounted) {
+        return;
+      }
+
+      _reload();
+
+      if (result == true) {
+        _showMessage('Assegnazione squadra aggiornata.');
       }
     });
   }
 
   void _goToLinkParent() {
     context.push('/members/link-parent').then((result) {
-      if (result == true && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Collegamento genitore/atleta aggiornato.'),
-          ),
-        );
-        _reload();
+      if (!mounted) {
+        return;
+      }
+
+      _reload();
+
+      if (result == true) {
+        _showMessage('Genitore/tutore collegato.');
       }
     });
   }
 
   void _goToLinkAthleteAccount() {
     context.push('/members/link-athlete-account').then((result) {
-      if (result == true && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Account atleta collegato.')),
-        );
-        _reload();
+      if (!mounted) {
+        return;
       }
+
+      _reload();
+
+      if (result == true) {
+        _showMessage('Account atleta collegato.');
+      }
+    });
+  }
+
+  void _showMessage(String message) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
     });
   }
 

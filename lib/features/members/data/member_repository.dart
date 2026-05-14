@@ -36,12 +36,13 @@ class MemberRepository {
           .order('name');
 
       final teamRows = List<Map<String, dynamic>>.from(teamsData);
+
       final teamIds = teamRows
           .map((row) => (row['id'] ?? '').toString())
           .where((id) => id.isNotEmpty)
           .toList(growable: false);
 
-      final teamsById = <String, String>{
+      final teamsById = {
         for (final row in teamRows)
           (row['id'] ?? '').toString(): (row['name'] ?? 'Squadra').toString(),
       };
@@ -78,7 +79,7 @@ class MemberRepository {
           .where((id) => id.isNotEmpty)
           .toList(growable: false);
 
-      final userIds = <String>{
+      final userIds = {
         for (final row in membershipRows)
           if ((row['user_id'] ?? '').toString().isNotEmpty)
             (row['user_id'] ?? '').toString(),
@@ -131,6 +132,7 @@ class MemberRepository {
 
         for (final assignment in teamAssignmentRows) {
           final teamId = (assignment['team_id'] ?? '').toString();
+
           final enrichedAssignment = Map<String, dynamic>.from(assignment)
             ..['team_name'] = teamsById[teamId] ?? 'Squadra';
 
@@ -191,7 +193,6 @@ class MemberRepository {
       }
 
       final members = <MemberSummary>[];
-
       final membershipUserIds = <String>{};
 
       for (final membershipMap in membershipRows) {
@@ -280,6 +281,13 @@ class MemberRepository {
         userId: userId,
         role: teamRole,
       );
+
+      await _client
+          .from('team_memberships')
+          .update({'status': 'removed'})
+          .eq('team_id', teamId)
+          .eq('user_id', userId)
+          .neq('role', teamRole.databaseValue);
 
       final existingData = await _client
           .from('team_memberships')
@@ -520,24 +528,39 @@ class MemberRepository {
     await _client
         .from('club_memberships')
         .update({
-          'role': _preserveHigherRole(currentRole, role).databaseValue,
+          'role': _highestRole(currentRole, role).databaseValue,
           'status': 'active',
         })
         .eq('id', membershipId);
   }
 
-  ClubRole _preserveHigherRole(ClubRole currentRole, ClubRole requestedRole) {
-    if (currentRole == ClubRole.owner || currentRole == ClubRole.admin) {
-      return currentRole;
-    }
-
-    if (currentRole == ClubRole.teamManager ||
-        currentRole == ClubRole.coach ||
-        currentRole == ClubRole.staff) {
+  ClubRole _highestRole(ClubRole currentRole, ClubRole requestedRole) {
+    if (_rolePriority(currentRole) >= _rolePriority(requestedRole)) {
       return currentRole;
     }
 
     return requestedRole;
+  }
+
+  int _rolePriority(ClubRole role) {
+    switch (role) {
+      case ClubRole.owner:
+        return 70;
+      case ClubRole.admin:
+        return 60;
+      case ClubRole.teamManager:
+        return 50;
+      case ClubRole.coach:
+        return 40;
+      case ClubRole.staff:
+        return 30;
+      case ClubRole.parent:
+        return 20;
+      case ClubRole.athlete:
+        return 10;
+      case ClubRole.unknown:
+        return 0;
+    }
   }
 
   Future<void> _syncAthleteTeamMembership({
@@ -607,8 +630,6 @@ class MemberRepository {
   }
 
   bool _isAssignableTeamRole(ClubRole role) {
-    return role == ClubRole.teamManager ||
-        role == ClubRole.coach ||
-        role == ClubRole.staff;
+    return role != ClubRole.unknown;
   }
 }

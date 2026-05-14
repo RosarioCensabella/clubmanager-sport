@@ -1,6 +1,5 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../core/permissions/club_role.dart';
 import '../../../core/utils/app_result.dart';
@@ -28,6 +27,8 @@ class _LinkParentRelationScreenState
   String? _activeClubId;
   String? _selectedParentUserId;
   String? _selectedAthleteId;
+  String _parentQuery = '';
+  String _athleteQuery = '';
   String _relationType = 'parent';
   bool _isLoading = false;
 
@@ -78,6 +79,12 @@ class _LinkParentRelationScreenState
     }
   }
 
+  void _reload() {
+    setState(() {
+      _future = _loadData();
+    });
+  }
+
   Future<void> _submit() async {
     if (_isLoading) {
       return;
@@ -86,6 +93,7 @@ class _LinkParentRelationScreenState
     final clubId = _activeClubId;
 
     if (clubId == null || clubId.isEmpty) {
+      _showMessage('Club attivo non valido.');
       return;
     }
 
@@ -116,326 +124,17 @@ class _LinkParentRelationScreenState
       return;
     }
 
-    setState(() {
-      _isLoading = false;
-    });
-
     switch (result) {
       case AppSuccess():
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Genitore/tutore collegato.')),
-        );
-        context.pop(true);
+        Navigator.of(context).pop(true);
 
       case AppFailure(:final message):
+        setState(() {
+          _isLoading = false;
+        });
+
         _showMessage(message);
     }
-  }
-
-  Future<void> _pickParent(List<MemberSummary> parents) async {
-    final selected = await _showMemberPicker(
-      title: 'Seleziona genitore/tutore',
-      members: parents,
-      selectedUserId: _selectedParentUserId,
-    );
-
-    if (selected == null) {
-      return;
-    }
-
-    setState(() {
-      _selectedParentUserId = selected.userId;
-    });
-  }
-
-  Future<void> _pickAthlete(List<AthleteSummary> athletes) async {
-    final selected = await _showAthletePicker(
-      title: 'Seleziona atleta',
-      athletes: athletes,
-      selectedAthleteId: _selectedAthleteId,
-    );
-
-    if (selected == null) {
-      return;
-    }
-
-    setState(() {
-      _selectedAthleteId = selected.id;
-    });
-  }
-
-  Future<void> _pickRelationType() async {
-    final selected = await showModalBottomSheet<String>(
-      context: context,
-      showDragHandle: true,
-      builder: (context) {
-        const relationTypes = ['parent', 'mother', 'father', 'guardian'];
-
-        return SafeArea(
-          child: ListView(
-            shrinkWrap: true,
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-            children: [
-              Text(
-                'Tipo relazione',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
-              ),
-              const SizedBox(height: 12),
-              for (final relationType in relationTypes)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: ListTile(
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      side: const BorderSide(color: Color(0xFFE0E6ED)),
-                    ),
-                    leading: const Icon(Icons.family_restroom_outlined),
-                    title: Text(_relationLabel(relationType)),
-                    trailing: relationType == _relationType
-                        ? const Icon(Icons.check_circle)
-                        : const Icon(Icons.chevron_right),
-                    onTap: () => Navigator.of(context).pop(relationType),
-                  ),
-                ),
-            ],
-          ),
-        );
-      },
-    );
-
-    if (selected == null) {
-      return;
-    }
-
-    setState(() {
-      _relationType = selected;
-    });
-  }
-
-  Future<MemberSummary?> _showMemberPicker({
-    required String title,
-    required List<MemberSummary> members,
-    required String? selectedUserId,
-  }) async {
-    final searchController = TextEditingController();
-    var query = '';
-
-    final selected = await showModalBottomSheet<MemberSummary>(
-      context: context,
-      showDragHandle: true,
-      isScrollControlled: true,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setSheetState) {
-            final filtered = members
-                .where((member) {
-                  final normalizedQuery = query.trim().toLowerCase();
-
-                  if (normalizedQuery.isEmpty) {
-                    return true;
-                  }
-
-                  return member.searchableText.contains(normalizedQuery);
-                })
-                .toList(growable: false);
-
-            return SafeArea(
-              child: Padding(
-                padding: EdgeInsets.only(
-                  left: 16,
-                  right: 16,
-                  bottom: 16 + MediaQuery.of(context).viewInsets.bottom,
-                ),
-                child: SizedBox(
-                  height: MediaQuery.of(context).size.height * 0.75,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Text(
-                        title,
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      TextField(
-                        controller: searchController,
-                        autofocus: true,
-                        decoration: const InputDecoration(
-                          labelText: 'Cerca',
-                          hintText: 'Nome, email...',
-                          prefixIcon: Icon(Icons.search),
-                        ),
-                        onChanged: (value) {
-                          setSheetState(() {
-                            query = value;
-                          });
-                        },
-                      ),
-                      const SizedBox(height: 12),
-                      Expanded(
-                        child: filtered.isEmpty
-                            ? const Center(child: Text('Nessun risultato.'))
-                            : ListView.separated(
-                                itemCount: filtered.length,
-                                separatorBuilder: (context, index) =>
-                                    const SizedBox(height: 8),
-                                itemBuilder: (context, index) {
-                                  final member = filtered[index];
-
-                                  return ListTile(
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(16),
-                                      side: const BorderSide(
-                                        color: Color(0xFFE0E6ED),
-                                      ),
-                                    ),
-                                    leading: CircleAvatar(
-                                      child: Text(member.initials),
-                                    ),
-                                    title: Text(member.fullName),
-                                    subtitle: Text(
-                                      member.email.isEmpty
-                                          ? member.roleLabel
-                                          : '${member.email} · ${member.roleLabel}',
-                                    ),
-                                    trailing: member.userId == selectedUserId
-                                        ? const Icon(Icons.check_circle)
-                                        : const Icon(Icons.chevron_right),
-                                    onTap: () =>
-                                        Navigator.of(context).pop(member),
-                                  );
-                                },
-                              ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
-
-    searchController.dispose();
-
-    return selected;
-  }
-
-  Future<AthleteSummary?> _showAthletePicker({
-    required String title,
-    required List<AthleteSummary> athletes,
-    required String? selectedAthleteId,
-  }) async {
-    final searchController = TextEditingController();
-    var query = '';
-
-    final selected = await showModalBottomSheet<AthleteSummary>(
-      context: context,
-      showDragHandle: true,
-      isScrollControlled: true,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setSheetState) {
-            final filtered = athletes
-                .where((athlete) {
-                  final normalizedQuery = query.trim().toLowerCase();
-
-                  if (normalizedQuery.isEmpty) {
-                    return true;
-                  }
-
-                  return [
-                    athlete.fullName,
-                    athlete.teamName ?? '',
-                    athlete.sportRole ?? '',
-                  ].join(' ').toLowerCase().contains(normalizedQuery);
-                })
-                .toList(growable: false);
-
-            return SafeArea(
-              child: Padding(
-                padding: EdgeInsets.only(
-                  left: 16,
-                  right: 16,
-                  bottom: 16 + MediaQuery.of(context).viewInsets.bottom,
-                ),
-                child: SizedBox(
-                  height: MediaQuery.of(context).size.height * 0.75,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Text(
-                        title,
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      TextField(
-                        controller: searchController,
-                        autofocus: true,
-                        decoration: const InputDecoration(
-                          labelText: 'Cerca atleta',
-                          hintText: 'Nome o squadra...',
-                          prefixIcon: Icon(Icons.search),
-                        ),
-                        onChanged: (value) {
-                          setSheetState(() {
-                            query = value;
-                          });
-                        },
-                      ),
-                      const SizedBox(height: 12),
-                      Expanded(
-                        child: filtered.isEmpty
-                            ? const Center(child: Text('Nessun risultato.'))
-                            : ListView.separated(
-                                itemCount: filtered.length,
-                                separatorBuilder: (context, index) =>
-                                    const SizedBox(height: 8),
-                                itemBuilder: (context, index) {
-                                  final athlete = filtered[index];
-
-                                  return ListTile(
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(16),
-                                      side: const BorderSide(
-                                        color: Color(0xFFE0E6ED),
-                                      ),
-                                    ),
-                                    leading: const Icon(
-                                      Icons.directions_run_outlined,
-                                    ),
-                                    title: Text(athlete.fullName),
-                                    subtitle: Text(
-                                      athlete.teamName ?? 'Nessuna squadra',
-                                    ),
-                                    trailing: athlete.id == selectedAthleteId
-                                        ? const Icon(Icons.check_circle)
-                                        : const Icon(Icons.chevron_right),
-                                    onTap: () =>
-                                        Navigator.of(context).pop(athlete),
-                                  );
-                                },
-                              ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
-
-    searchController.dispose();
-
-    return selected;
   }
 
   void _showMessage(String message) {
@@ -446,6 +145,40 @@ class _LinkParentRelationScreenState
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  List<MemberSummary> _parentCandidates(List<MemberSummary> members) {
+    final normalizedQuery = _parentQuery.trim().toLowerCase();
+
+    return members
+        .where((member) => member.userId.trim().isNotEmpty)
+        .where((member) => member.role == ClubRole.parent)
+        .where((member) {
+          if (normalizedQuery.isEmpty) {
+            return true;
+          }
+
+          return member.searchableText.contains(normalizedQuery);
+        })
+        .toList(growable: false);
+  }
+
+  List<AthleteSummary> _filteredAthletes(List<AthleteSummary> athletes) {
+    final normalizedQuery = _athleteQuery.trim().toLowerCase();
+
+    return athletes
+        .where((athlete) {
+          if (normalizedQuery.isEmpty) {
+            return true;
+          }
+
+          return [
+            athlete.fullName,
+            athlete.teamName ?? '',
+            athlete.sportRole ?? '',
+          ].join(' ').toLowerCase().contains(normalizedQuery);
+        })
+        .toList(growable: false);
   }
 
   MemberSummary? _selectedParentFrom(List<MemberSummary> members) {
@@ -475,20 +208,7 @@ class _LinkParentRelationScreenState
       return athlete.fullName;
     }
 
-    return '${athlete.fullName} · $teamName';
-  }
-
-  String _relationLabel(String relationType) {
-    switch (relationType) {
-      case 'mother':
-        return 'Madre';
-      case 'father':
-        return 'Padre';
-      case 'guardian':
-        return 'Tutore';
-      default:
-        return 'Genitore';
-    }
+    return '${athlete.fullName} Â· $teamName';
   }
 
   @override
@@ -507,36 +227,18 @@ class _LinkParentRelationScreenState
           if (result == null) {
             return AppErrorView(
               message: 'Risposta non valida durante il caricamento.',
-              onRetry: () {
-                setState(() {
-                  _future = _loadData();
-                });
-              },
+              onRetry: _reload,
             );
           }
 
           switch (result) {
             case AppFailure(:final message):
-              return AppErrorView(
-                message: message,
-                onRetry: () {
-                  setState(() {
-                    _future = _loadData();
-                  });
-                },
-              );
+              return AppErrorView(message: message, onRetry: _reload);
 
             case AppSuccess(:final data):
-              final parentCandidates = data.members
-                  .where(
-                    (member) =>
-                        member.hasUserAccount &&
-                        !member.isAthleteProfileOnly &&
-                        member.role == ClubRole.parent,
-                  )
-                  .toList(growable: false);
-
-              final selectedParent = _selectedParentFrom(parentCandidates);
+              final visibleParents = _parentCandidates(data.members);
+              final visibleAthletes = _filteredAthletes(data.athletes);
+              final selectedParent = _selectedParentFrom(data.members);
               final selectedAthlete = _selectedAthleteFrom(data.athletes);
 
               return SafeArea(
@@ -550,38 +252,108 @@ class _LinkParentRelationScreenState
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Cerca un genitore già collegato al club e abbinalo a una scheda atleta.',
+                      'Cerca un genitore giÃ  collegato al club e abbinalo a una scheda atleta.',
                       style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                         color: const Color(0xFF52616B),
                       ),
                     ),
                     const SizedBox(height: 24),
-                    _SelectorField(
-                      label: 'Genitore/Tutore',
-                      value: selectedParent == null
-                          ? 'Seleziona genitore/tutore'
-                          : selectedParent.fullName,
-                      icon: Icons.person_outline,
+                    if (selectedParent != null)
+                      _SelectedValueCard(
+                        icon: Icons.person_outline,
+                        title: 'Genitore selezionato',
+                        value: selectedParent.fullName,
+                      ),
+                    const SizedBox(height: 12),
+                    TextField(
                       enabled: !_isLoading,
-                      onTap: () => _pickParent(parentCandidates),
+                      decoration: const InputDecoration(
+                        labelText: 'Cerca genitore/tutore',
+                        hintText: 'Nome o email...',
+                        prefixIcon: Icon(Icons.search),
+                      ),
+                      onChanged: (value) {
+                        setState(() {
+                          _parentQuery = value;
+                        });
+                      },
                     ),
+                    const SizedBox(height: 12),
+                    _SectionTitle(title: 'Genitori disponibili'),
+                    const SizedBox(height: 8),
+                    if (visibleParents.isEmpty)
+                      const _EmptyInlineMessage(
+                        message:
+                            'Nessun genitore/tutore trovato. Invitalo prima come Genitore/Tutore.',
+                      )
+                    else
+                      for (final parent in visibleParents) ...[
+                        _SelectableParentTile(
+                          member: parent,
+                          selected: parent.userId == _selectedParentUserId,
+                          enabled: !_isLoading,
+                          onTap: () {
+                            setState(() {
+                              _selectedParentUserId = parent.userId;
+                            });
+                          },
+                        ),
+                        const SizedBox(height: 8),
+                      ],
                     const SizedBox(height: 16),
-                    _SelectorField(
-                      label: 'Atleta',
-                      value: selectedAthlete == null
-                          ? 'Seleziona atleta'
-                          : _athleteLabel(selectedAthlete),
-                      icon: Icons.directions_run_outlined,
+                    if (selectedAthlete != null)
+                      _SelectedValueCard(
+                        icon: Icons.directions_run_outlined,
+                        title: 'Atleta selezionato',
+                        value: _athleteLabel(selectedAthlete),
+                      ),
+                    const SizedBox(height: 12),
+                    TextField(
                       enabled: !_isLoading,
-                      onTap: () => _pickAthlete(data.athletes),
+                      decoration: const InputDecoration(
+                        labelText: 'Cerca atleta',
+                        hintText: 'Nome o squadra...',
+                        prefixIcon: Icon(Icons.search),
+                      ),
+                      onChanged: (value) {
+                        setState(() {
+                          _athleteQuery = value;
+                        });
+                      },
                     ),
+                    const SizedBox(height: 12),
+                    _SectionTitle(title: 'Atleti disponibili'),
+                    const SizedBox(height: 8),
+                    if (visibleAthletes.isEmpty)
+                      const _EmptyInlineMessage(
+                        message: 'Nessun atleta trovato.',
+                      )
+                    else
+                      for (final athlete in visibleAthletes) ...[
+                        _SelectableAthleteTile(
+                          athlete: athlete,
+                          selected: athlete.id == _selectedAthleteId,
+                          enabled: !_isLoading,
+                          label: _athleteLabel(athlete),
+                          onTap: () {
+                            setState(() {
+                              _selectedAthleteId = athlete.id;
+                            });
+                          },
+                        ),
+                        const SizedBox(height: 8),
+                      ],
                     const SizedBox(height: 16),
-                    _SelectorField(
-                      label: 'Tipo relazione',
-                      value: _relationLabel(_relationType),
-                      icon: Icons.family_restroom_outlined,
+                    _SectionTitle(title: 'Tipo relazione'),
+                    const SizedBox(height: 8),
+                    _RelationTypePicker(
+                      selectedRelationType: _relationType,
                       enabled: !_isLoading,
-                      onTap: _pickRelationType,
+                      onChanged: (value) {
+                        setState(() {
+                          _relationType = value;
+                        });
+                      },
                     ),
                     const SizedBox(height: 28),
                     AppPrimaryButton(
@@ -599,43 +371,6 @@ class _LinkParentRelationScreenState
   }
 }
 
-class _SelectorField extends StatelessWidget {
-  const _SelectorField({
-    required this.label,
-    required this.value,
-    required this.icon,
-    required this.enabled,
-    required this.onTap,
-  });
-
-  final String label;
-  final String value;
-  final IconData icon;
-  final bool enabled;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(18),
-      onTap: enabled ? onTap : null,
-      child: InputDecorator(
-        decoration: InputDecoration(
-          labelText: label,
-          prefixIcon: Icon(icon),
-          suffixIcon: const Icon(Icons.arrow_drop_down),
-        ),
-        child: Text(
-          value,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
-      ),
-    );
-  }
-}
-
 class _LinkParentRelationData {
   const _LinkParentRelationData({
     required this.members,
@@ -644,4 +379,229 @@ class _LinkParentRelationData {
 
   final List<MemberSummary> members;
   final List<AthleteSummary> athletes;
+}
+
+class _SectionTitle extends StatelessWidget {
+  const _SectionTitle({required this.title});
+
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      title,
+      style: Theme.of(
+        context,
+      ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900),
+    );
+  }
+}
+
+class _SelectedValueCard extends StatelessWidget {
+  const _SelectedValueCard({
+    required this.icon,
+    required this.title,
+    required this.value,
+  });
+
+  final IconData icon;
+  final String title;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      color: Theme.of(context).colorScheme.primaryContainer,
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Row(
+          children: [
+            Icon(icon, color: Theme.of(context).colorScheme.primary),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    value,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SelectableParentTile extends StatelessWidget {
+  const _SelectableParentTile({
+    required this.member,
+    required this.selected,
+    required this.enabled,
+    required this.onTap,
+  });
+
+  final MemberSummary member;
+  final bool selected;
+  final bool enabled;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return _SelectableTile(
+      selected: selected,
+      enabled: enabled,
+      icon: Icons.person_outline,
+      title: member.fullName,
+      subtitle: member.email.isEmpty
+          ? member.roleLabel
+          : '${member.email} Â· ${member.roleLabel}',
+      onTap: onTap,
+    );
+  }
+}
+
+class _SelectableAthleteTile extends StatelessWidget {
+  const _SelectableAthleteTile({
+    required this.athlete,
+    required this.selected,
+    required this.enabled,
+    required this.label,
+    required this.onTap,
+  });
+
+  final AthleteSummary athlete;
+  final bool selected;
+  final bool enabled;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return _SelectableTile(
+      selected: selected,
+      enabled: enabled,
+      icon: Icons.directions_run_outlined,
+      title: athlete.fullName,
+      subtitle: label,
+      onTap: onTap,
+    );
+  }
+}
+
+class _SelectableTile extends StatelessWidget {
+  const _SelectableTile({
+    required this.selected,
+    required this.enabled,
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  final bool selected;
+  final bool enabled;
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      enabled: enabled,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: selected
+              ? Theme.of(context).colorScheme.primary
+              : const Color(0xFFE0E6ED),
+          width: selected ? 2 : 1,
+        ),
+      ),
+      leading: Icon(icon),
+      title: Text(title),
+      subtitle: Text(subtitle),
+      trailing: selected
+          ? const Icon(Icons.check_circle)
+          : const Icon(Icons.chevron_right),
+      onTap: enabled ? onTap : null,
+    );
+  }
+}
+
+class _RelationTypePicker extends StatelessWidget {
+  const _RelationTypePicker({
+    required this.selectedRelationType,
+    required this.enabled,
+    required this.onChanged,
+  });
+
+  final String selectedRelationType;
+  final bool enabled;
+  final ValueChanged<String> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    const options = [
+      _RelationTypeOption(value: 'parent', label: 'Genitore'),
+      _RelationTypeOption(value: 'mother', label: 'Madre'),
+      _RelationTypeOption(value: 'father', label: 'Padre'),
+      _RelationTypeOption(value: 'guardian', label: 'Tutore'),
+    ];
+
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        for (final option in options)
+          ChoiceChip(
+            label: Text(option.label),
+            selected: selectedRelationType == option.value,
+            onSelected: enabled ? (_) => onChanged(option.value) : null,
+          ),
+      ],
+    );
+  }
+}
+
+class _RelationTypeOption {
+  const _RelationTypeOption({required this.value, required this.label});
+
+  final String value;
+  final String label;
+}
+
+class _EmptyInlineMessage extends StatelessWidget {
+  const _EmptyInlineMessage({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Text(
+          message,
+          textAlign: TextAlign.center,
+          style: Theme.of(
+            context,
+          ).textTheme.bodyMedium?.copyWith(color: const Color(0xFF52616B)),
+        ),
+      ),
+    );
+  }
 }

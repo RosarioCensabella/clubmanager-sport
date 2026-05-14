@@ -1,6 +1,5 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../core/permissions/club_role.dart';
 import '../../../core/utils/app_result.dart';
@@ -28,6 +27,8 @@ class _AssignTeamMemberScreenState
   String? _activeClubId;
   String? _selectedUserId;
   String? _selectedTeamId;
+  String _memberQuery = '';
+  String _teamQuery = '';
   ClubRole _teamRole = ClubRole.teamManager;
   bool _isLoading = false;
 
@@ -78,6 +79,12 @@ class _AssignTeamMemberScreenState
     }
   }
 
+  void _reload() {
+    setState(() {
+      _future = _loadData();
+    });
+  }
+
   Future<void> _submit() async {
     if (_isLoading) {
       return;
@@ -86,6 +93,7 @@ class _AssignTeamMemberScreenState
     final clubId = _activeClubId;
 
     if (clubId == null || clubId.isEmpty) {
+      _showMessage('Club attivo non valido.');
       return;
     }
 
@@ -116,320 +124,17 @@ class _AssignTeamMemberScreenState
       return;
     }
 
-    setState(() {
-      _isLoading = false;
-    });
-
     switch (result) {
       case AppSuccess():
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Assegnazione squadra aggiornata.')),
-        );
-        context.pop(true);
+        Navigator.of(context).pop(true);
 
       case AppFailure(:final message):
+        setState(() {
+          _isLoading = false;
+        });
+
         _showMessage(message);
     }
-  }
-
-  Future<void> _pickMember(List<MemberSummary> members) async {
-    final selected = await _showMemberPicker(
-      title: 'Seleziona persona',
-      members: members,
-      selectedUserId: _selectedUserId,
-    );
-
-    if (selected == null) {
-      return;
-    }
-
-    setState(() {
-      _selectedUserId = selected.userId;
-    });
-  }
-
-  Future<void> _pickTeam(List<TeamSummary> teams) async {
-    final selected = await _showTeamPicker(
-      title: 'Seleziona squadra',
-      teams: teams,
-      selectedTeamId: _selectedTeamId,
-    );
-
-    if (selected == null) {
-      return;
-    }
-
-    setState(() {
-      _selectedTeamId = selected.id;
-    });
-  }
-
-  Future<void> _pickTeamRole() async {
-    final selected = await showModalBottomSheet<ClubRole>(
-      context: context,
-      showDragHandle: true,
-      builder: (context) {
-        const roles = [ClubRole.teamManager, ClubRole.coach, ClubRole.staff];
-
-        return SafeArea(
-          child: ListView(
-            shrinkWrap: true,
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-            children: [
-              Text(
-                'Ruolo nella squadra',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
-              ),
-              const SizedBox(height: 12),
-              for (final role in roles)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: ListTile(
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      side: const BorderSide(color: Color(0xFFE0E6ED)),
-                    ),
-                    leading: const Icon(Icons.badge_outlined),
-                    title: Text(_teamRoleLabel(role)),
-                    trailing: role == _teamRole
-                        ? const Icon(Icons.check_circle)
-                        : const Icon(Icons.chevron_right),
-                    onTap: () => Navigator.of(context).pop(role),
-                  ),
-                ),
-            ],
-          ),
-        );
-      },
-    );
-
-    if (selected == null) {
-      return;
-    }
-
-    setState(() {
-      _teamRole = selected;
-    });
-  }
-
-  Future<MemberSummary?> _showMemberPicker({
-    required String title,
-    required List<MemberSummary> members,
-    required String? selectedUserId,
-  }) async {
-    final searchController = TextEditingController();
-    var query = '';
-
-    final selected = await showModalBottomSheet<MemberSummary>(
-      context: context,
-      showDragHandle: true,
-      isScrollControlled: true,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setSheetState) {
-            final filtered = members
-                .where((member) {
-                  final normalizedQuery = query.trim().toLowerCase();
-
-                  if (normalizedQuery.isEmpty) {
-                    return true;
-                  }
-
-                  return member.searchableText.contains(normalizedQuery);
-                })
-                .toList(growable: false);
-
-            return SafeArea(
-              child: Padding(
-                padding: EdgeInsets.only(
-                  left: 16,
-                  right: 16,
-                  bottom: 16 + MediaQuery.of(context).viewInsets.bottom,
-                ),
-                child: SizedBox(
-                  height: MediaQuery.of(context).size.height * 0.75,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Text(
-                        title,
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      TextField(
-                        controller: searchController,
-                        autofocus: true,
-                        decoration: const InputDecoration(
-                          labelText: 'Cerca',
-                          hintText: 'Nome, email, ruolo...',
-                          prefixIcon: Icon(Icons.search),
-                        ),
-                        onChanged: (value) {
-                          setSheetState(() {
-                            query = value;
-                          });
-                        },
-                      ),
-                      const SizedBox(height: 12),
-                      Expanded(
-                        child: filtered.isEmpty
-                            ? const Center(child: Text('Nessun risultato.'))
-                            : ListView.separated(
-                                itemCount: filtered.length,
-                                separatorBuilder: (context, index) =>
-                                    const SizedBox(height: 8),
-                                itemBuilder: (context, index) {
-                                  final member = filtered[index];
-
-                                  return ListTile(
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(16),
-                                      side: const BorderSide(
-                                        color: Color(0xFFE0E6ED),
-                                      ),
-                                    ),
-                                    leading: CircleAvatar(
-                                      child: Text(member.initials),
-                                    ),
-                                    title: Text(member.fullName),
-                                    subtitle: Text(
-                                      [
-                                        if (member.email.isNotEmpty)
-                                          member.email,
-                                        member.roleLabel,
-                                      ].join(' · '),
-                                    ),
-                                    trailing: member.userId == selectedUserId
-                                        ? const Icon(Icons.check_circle)
-                                        : const Icon(Icons.chevron_right),
-                                    onTap: () =>
-                                        Navigator.of(context).pop(member),
-                                  );
-                                },
-                              ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
-
-    searchController.dispose();
-
-    return selected;
-  }
-
-  Future<TeamSummary?> _showTeamPicker({
-    required String title,
-    required List<TeamSummary> teams,
-    required String? selectedTeamId,
-  }) async {
-    final searchController = TextEditingController();
-    var query = '';
-
-    final selected = await showModalBottomSheet<TeamSummary>(
-      context: context,
-      showDragHandle: true,
-      isScrollControlled: true,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setSheetState) {
-            final filtered = teams
-                .where((team) {
-                  final normalizedQuery = query.trim().toLowerCase();
-
-                  if (normalizedQuery.isEmpty) {
-                    return true;
-                  }
-
-                  return team.name.toLowerCase().contains(normalizedQuery);
-                })
-                .toList(growable: false);
-
-            return SafeArea(
-              child: Padding(
-                padding: EdgeInsets.only(
-                  left: 16,
-                  right: 16,
-                  bottom: 16 + MediaQuery.of(context).viewInsets.bottom,
-                ),
-                child: SizedBox(
-                  height: MediaQuery.of(context).size.height * 0.65,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Text(
-                        title,
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      TextField(
-                        controller: searchController,
-                        autofocus: true,
-                        decoration: const InputDecoration(
-                          labelText: 'Cerca squadra',
-                          prefixIcon: Icon(Icons.search),
-                        ),
-                        onChanged: (value) {
-                          setSheetState(() {
-                            query = value;
-                          });
-                        },
-                      ),
-                      const SizedBox(height: 12),
-                      Expanded(
-                        child: filtered.isEmpty
-                            ? const Center(child: Text('Nessun risultato.'))
-                            : ListView.separated(
-                                itemCount: filtered.length,
-                                separatorBuilder: (context, index) =>
-                                    const SizedBox(height: 8),
-                                itemBuilder: (context, index) {
-                                  final team = filtered[index];
-
-                                  return ListTile(
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(16),
-                                      side: const BorderSide(
-                                        color: Color(0xFFE0E6ED),
-                                      ),
-                                    ),
-                                    leading: const Icon(
-                                      Icons.groups_2_outlined,
-                                    ),
-                                    title: Text(team.name),
-                                    trailing: team.id == selectedTeamId
-                                        ? const Icon(Icons.check_circle)
-                                        : const Icon(Icons.chevron_right),
-                                    onTap: () =>
-                                        Navigator.of(context).pop(team),
-                                  );
-                                },
-                              ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
-
-    searchController.dispose();
-
-    return selected;
   }
 
   void _showMessage(String message) {
@@ -440,6 +145,35 @@ class _AssignTeamMemberScreenState
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  List<MemberSummary> _assignableMembers(List<MemberSummary> members) {
+    final normalizedQuery = _memberQuery.trim().toLowerCase();
+
+    return members
+        .where((member) => member.userId.trim().isNotEmpty)
+        .where((member) {
+          if (normalizedQuery.isEmpty) {
+            return true;
+          }
+
+          return member.searchableText.contains(normalizedQuery);
+        })
+        .toList(growable: false);
+  }
+
+  List<TeamSummary> _filteredTeams(List<TeamSummary> teams) {
+    final normalizedQuery = _teamQuery.trim().toLowerCase();
+
+    return teams
+        .where((team) {
+          if (normalizedQuery.isEmpty) {
+            return true;
+          }
+
+          return team.name.toLowerCase().contains(normalizedQuery);
+        })
+        .toList(growable: false);
   }
 
   MemberSummary? _selectedMemberFrom(List<MemberSummary> members) {
@@ -462,19 +196,6 @@ class _AssignTeamMemberScreenState
     return null;
   }
 
-  String _teamRoleLabel(ClubRole role) {
-    switch (role) {
-      case ClubRole.teamManager:
-        return 'Manager squadra';
-      case ClubRole.coach:
-        return 'Allenatore';
-      case ClubRole.staff:
-        return 'Staff';
-      default:
-        return role.label;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -491,34 +212,18 @@ class _AssignTeamMemberScreenState
           if (result == null) {
             return AppErrorView(
               message: 'Risposta non valida durante il caricamento.',
-              onRetry: () {
-                setState(() {
-                  _future = _loadData();
-                });
-              },
+              onRetry: _reload,
             );
           }
 
           switch (result) {
             case AppFailure(:final message):
-              return AppErrorView(
-                message: message,
-                onRetry: () {
-                  setState(() {
-                    _future = _loadData();
-                  });
-                },
-              );
+              return AppErrorView(message: message, onRetry: _reload);
 
             case AppSuccess(:final data):
-              final assignableMembers = data.members
-                  .where(
-                    (member) =>
-                        member.hasUserAccount && !member.isAthleteProfileOnly,
-                  )
-                  .toList(growable: false);
-
-              final selectedMember = _selectedMemberFrom(assignableMembers);
+              final visibleMembers = _assignableMembers(data.members);
+              final visibleTeams = _filteredTeams(data.teams);
+              final selectedMember = _selectedMemberFrom(data.members);
               final selectedTeam = _selectedTeamFrom(data.teams);
 
               return SafeArea(
@@ -532,39 +237,107 @@ class _AssignTeamMemberScreenState
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Cerca una persona e assegnala a una squadra come manager, allenatore o staff.',
+                      'Cerca una persona, scegli la squadra e assegna il ruolo operativo.',
                       style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                         color: const Color(0xFF52616B),
                       ),
                     ),
                     const SizedBox(height: 24),
-                    _SelectorField(
-                      label: 'Persona',
-                      value: selectedMember == null
-                          ? 'Seleziona persona'
-                          : [
-                              selectedMember.fullName,
-                              selectedMember.roleLabel,
-                            ].join(' · '),
-                      icon: Icons.person_outline,
+                    if (selectedMember != null)
+                      _SelectedValueCard(
+                        icon: Icons.person_outline,
+                        title: 'Persona selezionata',
+                        value:
+                            '${selectedMember.fullName} Â· ${selectedMember.roleLabel}',
+                      ),
+                    const SizedBox(height: 12),
+                    TextField(
                       enabled: !_isLoading,
-                      onTap: () => _pickMember(assignableMembers),
+                      decoration: const InputDecoration(
+                        labelText: 'Cerca persona',
+                        hintText: 'Nome, email, ruolo...',
+                        prefixIcon: Icon(Icons.search),
+                      ),
+                      onChanged: (value) {
+                        setState(() {
+                          _memberQuery = value;
+                        });
+                      },
                     ),
+                    const SizedBox(height: 12),
+                    const _SectionTitle(title: 'Persone disponibili'),
+                    const SizedBox(height: 8),
+                    if (visibleMembers.isEmpty)
+                      const _EmptyInlineMessage(
+                        message: 'Nessuna persona trovata.',
+                      )
+                    else
+                      for (final member in visibleMembers) ...[
+                        _SelectableMemberTile(
+                          member: member,
+                          selected: member.userId == _selectedUserId,
+                          enabled: !_isLoading,
+                          onTap: () {
+                            setState(() {
+                              _selectedUserId = member.userId;
+                            });
+                          },
+                        ),
+                        const SizedBox(height: 8),
+                      ],
                     const SizedBox(height: 16),
-                    _SelectorField(
-                      label: 'Squadra',
-                      value: selectedTeam?.name ?? 'Seleziona squadra',
-                      icon: Icons.groups_2_outlined,
+                    if (selectedTeam != null)
+                      _SelectedValueCard(
+                        icon: Icons.groups_2_outlined,
+                        title: 'Squadra selezionata',
+                        value: selectedTeam.name,
+                      ),
+                    const SizedBox(height: 12),
+                    TextField(
                       enabled: !_isLoading,
-                      onTap: () => _pickTeam(data.teams),
+                      decoration: const InputDecoration(
+                        labelText: 'Cerca squadra',
+                        hintText: 'Nome squadra...',
+                        prefixIcon: Icon(Icons.search),
+                      ),
+                      onChanged: (value) {
+                        setState(() {
+                          _teamQuery = value;
+                        });
+                      },
                     ),
+                    const SizedBox(height: 12),
+                    const _SectionTitle(title: 'Squadre disponibili'),
+                    const SizedBox(height: 8),
+                    if (visibleTeams.isEmpty)
+                      const _EmptyInlineMessage(
+                        message: 'Nessuna squadra trovata.',
+                      )
+                    else
+                      for (final team in visibleTeams) ...[
+                        _SelectableTeamTile(
+                          team: team,
+                          selected: team.id == _selectedTeamId,
+                          enabled: !_isLoading,
+                          onTap: () {
+                            setState(() {
+                              _selectedTeamId = team.id;
+                            });
+                          },
+                        ),
+                        const SizedBox(height: 8),
+                      ],
                     const SizedBox(height: 16),
-                    _SelectorField(
-                      label: 'Ruolo nella squadra',
-                      value: _teamRoleLabel(_teamRole),
-                      icon: Icons.badge_outlined,
+                    const _SectionTitle(title: 'Ruolo nella squadra'),
+                    const SizedBox(height: 8),
+                    _TeamRolePicker(
+                      selectedRole: _teamRole,
                       enabled: !_isLoading,
-                      onTap: _pickTeamRole,
+                      onChanged: (role) {
+                        setState(() {
+                          _teamRole = role;
+                        });
+                      },
                     ),
                     const SizedBox(height: 28),
                     AppPrimaryButton(
@@ -582,46 +355,238 @@ class _AssignTeamMemberScreenState
   }
 }
 
-class _SelectorField extends StatelessWidget {
-  const _SelectorField({
-    required this.label,
-    required this.value,
-    required this.icon,
-    required this.enabled,
-    required this.onTap,
-  });
+class _AssignTeamMemberData {
+  const _AssignTeamMemberData({required this.members, required this.teams});
 
-  final String label;
-  final String value;
-  final IconData icon;
-  final bool enabled;
-  final VoidCallback onTap;
+  final List<MemberSummary> members;
+  final List<TeamSummary> teams;
+}
+
+class _SectionTitle extends StatelessWidget {
+  const _SectionTitle({required this.title});
+
+  final String title;
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(18),
-      onTap: enabled ? onTap : null,
-      child: InputDecorator(
-        decoration: InputDecoration(
-          labelText: label,
-          prefixIcon: Icon(icon),
-          suffixIcon: const Icon(Icons.arrow_drop_down),
-        ),
-        child: Text(
-          value,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          style: Theme.of(context).textTheme.titleMedium,
+    return Text(
+      title,
+      style: Theme.of(
+        context,
+      ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900),
+    );
+  }
+}
+
+class _SelectedValueCard extends StatelessWidget {
+  const _SelectedValueCard({
+    required this.icon,
+    required this.title,
+    required this.value,
+  });
+
+  final IconData icon;
+  final String title;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      color: Theme.of(context).colorScheme.primaryContainer,
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Row(
+          children: [
+            Icon(icon, color: Theme.of(context).colorScheme.primary),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    value,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 }
 
-class _AssignTeamMemberData {
-  const _AssignTeamMemberData({required this.members, required this.teams});
+class _SelectableMemberTile extends StatelessWidget {
+  const _SelectableMemberTile({
+    required this.member,
+    required this.selected,
+    required this.enabled,
+    required this.onTap,
+  });
 
-  final List<MemberSummary> members;
-  final List<TeamSummary> teams;
+  final MemberSummary member;
+  final bool selected;
+  final bool enabled;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return _SelectableTile(
+      selected: selected,
+      enabled: enabled,
+      icon: Icons.person_outline,
+      title: member.fullName,
+      subtitle: member.email.isEmpty
+          ? member.roleLabel
+          : '${member.email} Â· ${member.roleLabel}',
+      onTap: onTap,
+    );
+  }
+}
+
+class _SelectableTeamTile extends StatelessWidget {
+  const _SelectableTeamTile({
+    required this.team,
+    required this.selected,
+    required this.enabled,
+    required this.onTap,
+  });
+
+  final TeamSummary team;
+  final bool selected;
+  final bool enabled;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return _SelectableTile(
+      selected: selected,
+      enabled: enabled,
+      icon: Icons.groups_2_outlined,
+      title: team.name,
+      subtitle: 'Squadra',
+      onTap: onTap,
+    );
+  }
+}
+
+class _SelectableTile extends StatelessWidget {
+  const _SelectableTile({
+    required this.selected,
+    required this.enabled,
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  final bool selected;
+  final bool enabled;
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      enabled: enabled,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: selected
+              ? Theme.of(context).colorScheme.primary
+              : const Color(0xFFE0E6ED),
+          width: selected ? 2 : 1,
+        ),
+      ),
+      leading: Icon(icon),
+      title: Text(title),
+      subtitle: Text(subtitle),
+      trailing: selected
+          ? const Icon(Icons.check_circle)
+          : const Icon(Icons.chevron_right),
+      onTap: enabled ? onTap : null,
+    );
+  }
+}
+
+class _TeamRolePicker extends StatelessWidget {
+  const _TeamRolePicker({
+    required this.selectedRole,
+    required this.enabled,
+    required this.onChanged,
+  });
+
+  final ClubRole selectedRole;
+  final bool enabled;
+  final ValueChanged<ClubRole> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    const options = [
+      _TeamRoleOption(role: ClubRole.owner, label: 'Proprietario'),
+      _TeamRoleOption(role: ClubRole.admin, label: 'Amministratore'),
+      _TeamRoleOption(
+        role: ClubRole.teamManager,
+        label: 'Responsabile squadra',
+      ),
+      _TeamRoleOption(role: ClubRole.coach, label: 'Allenatore'),
+      _TeamRoleOption(role: ClubRole.staff, label: 'Staff'),
+      _TeamRoleOption(role: ClubRole.athlete, label: 'Atleta'),
+      _TeamRoleOption(role: ClubRole.parent, label: 'Genitore/Tutore'),
+    ];
+
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        for (final option in options)
+          ChoiceChip(
+            label: Text(option.label),
+            selected: selectedRole == option.role,
+            onSelected: enabled ? (_) => onChanged(option.role) : null,
+          ),
+      ],
+    );
+  }
+}
+
+class _TeamRoleOption {
+  const _TeamRoleOption({required this.role, required this.label});
+
+  final ClubRole role;
+  final String label;
+}
+
+class _EmptyInlineMessage extends StatelessWidget {
+  const _EmptyInlineMessage({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Text(
+          message,
+          textAlign: TextAlign.center,
+          style: Theme.of(
+            context,
+          ).textTheme.bodyMedium?.copyWith(color: const Color(0xFF52616B)),
+        ),
+      ),
+    );
+  }
 }

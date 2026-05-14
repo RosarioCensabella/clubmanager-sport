@@ -37,6 +37,11 @@ class _InvitationAcceptanceScreenState
   @override
   void initState() {
     super.initState();
+
+    ref
+        .read(invitationRepositoryProvider)
+        .savePendingInvitationToken(widget.token);
+
     _future = _loadInvitation();
   }
 
@@ -111,6 +116,10 @@ class _InvitationAcceptanceScreenState
       return;
     }
 
+    await ref
+        .read(invitationRepositoryProvider)
+        .savePendingInvitationToken(invitation.token);
+
     setState(() {
       _isSubmitting = true;
     });
@@ -147,7 +156,7 @@ class _InvitationAcceptanceScreenState
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text(
-                'Account creato. Controlla la tua email, conferma l’account e poi riapri il link di invito.',
+                'Account creato. Controlla la tua email, conferma l’account e poi accedi: ti riporteremo automaticamente all’invito.',
               ),
             ),
           );
@@ -226,6 +235,7 @@ class _InvitationAcceptanceScreenState
                         currentEmail: currentUser.email,
                         isSubmitting: _isSubmitting,
                         onAccept: () => _acceptAsLoggedUser(data),
+                        onGoToLogin: () => context.go('/login'),
                       )
                     else
                       _CreateAccountForm(
@@ -330,12 +340,14 @@ class _LoggedUserAcceptanceCard extends StatelessWidget {
     required this.currentEmail,
     required this.isSubmitting,
     required this.onAccept,
+    required this.onGoToLogin,
   });
 
   final InvitationAcceptance invitation;
   final String currentEmail;
   final bool isSubmitting;
   final VoidCallback onAccept;
+  final VoidCallback onGoToLogin;
 
   @override
   Widget build(BuildContext context) {
@@ -349,7 +361,7 @@ class _LoggedUserAcceptanceCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              'Account già connesso',
+              'Account connesso',
               style: Theme.of(
                 context,
               ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900),
@@ -357,11 +369,17 @@ class _LoggedUserAcceptanceCard extends StatelessWidget {
             const SizedBox(height: 8),
             Text('Stai usando: $currentEmail'),
             const SizedBox(height: 16),
-            if (!emailMatches)
+            if (!emailMatches) ...[
               const Text(
                 'Questo invito è associato a un’altra email. Esci e accedi con l’email invitata.',
-              )
-            else
+              ),
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: onGoToLogin,
+                icon: const Icon(Icons.login_outlined),
+                label: const Text('Vai al login'),
+              ),
+            ] else
               AppPrimaryButton(
                 label: 'Accetta invito',
                 isLoading: isSubmitting,

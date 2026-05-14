@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/extensions/string_extensions.dart';
 import '../../../core/utils/app_result.dart';
 import '../../../core/widgets/app_primary_button.dart';
+import '../../members/presentation/invitation_providers.dart';
 import 'auth_providers.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -18,14 +19,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _invitationCodeController = TextEditingController();
 
   bool _obscurePassword = true;
   bool _isLoading = false;
+  bool _showInvitationCode = false;
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+    _invitationCodeController.dispose();
     super.dispose();
   }
 
@@ -57,10 +61,23 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     switch (result) {
       case AppSuccess():
+        final pendingToken = await ref
+            .read(invitationRepositoryProvider)
+            .getPendingInvitationToken();
+
+        if (!mounted) {
+          return;
+        }
+
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Accesso effettuato correttamente.')),
         );
-        context.go('/club-context');
+
+        if (pendingToken != null && pendingToken.isNotEmpty) {
+          context.go('/invite/${Uri.encodeComponent(pendingToken)}');
+        } else {
+          context.go('/club-context');
+        }
 
       case AppFailure(:final message):
         ScaffoldMessenger.of(
@@ -69,24 +86,28 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
   }
 
-  void _showInviteInfo() {
-    showDialog<void>(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: const Text('Accesso solo su invito'),
-          content: const Text(
-            'Non è possibile registrarsi liberamente. Per creare un account devi ricevere un invito dal club. Se hai già ricevuto un link, aprilo da email o messaggio.',
-          ),
-          actions: [
-            FilledButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text('Ho capito'),
-            ),
-          ],
-        );
-      },
+  Future<void> _openInvitation() async {
+    final repository = ref.read(invitationRepositoryProvider);
+    final token = repository.extractInvitationToken(
+      _invitationCodeController.text,
     );
+
+    if (token.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Inserisci il codice o il link dell’invito.'),
+        ),
+      );
+      return;
+    }
+
+    await repository.savePendingInvitationToken(token);
+
+    if (!mounted) {
+      return;
+    }
+
+    context.push('/invite/${Uri.encodeComponent(token)}');
   }
 
   @override
@@ -100,14 +121,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           child: ListView(
             children: [
               Text(
-                'Accedi al tuo account',
+                'Accedi al tuo club',
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                   fontWeight: FontWeight.w800,
                 ),
               ),
               const SizedBox(height: 8),
               Text(
-                'Inserisci email e password. Gli account vengono creati solo tramite invito del club.',
+                'Inserisci email e password per continuare.',
                 style: Theme.of(
                   context,
                 ).textTheme.bodyLarge?.copyWith(color: const Color(0xFF52616B)),
@@ -190,14 +211,113 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 isLoading: _isLoading,
                 onPressed: _submit,
               ),
+              const SizedBox(height: 18),
+              _InvitationAccessCard(
+                showCodeField: _showInvitationCode,
+                controller: _invitationCodeController,
+                isLoading: _isLoading,
+                onToggleCodeField: () {
+                  setState(() {
+                    _showInvitationCode = !_showInvitationCode;
+                  });
+                },
+                onOpenInvitation: _openInvitation,
+              ),
               const SizedBox(height: 16),
-              OutlinedButton.icon(
-                onPressed: _isLoading ? null : _showInviteInfo,
-                icon: const Icon(Icons.mark_email_read_outlined),
-                label: const Text('Non hai un account? Serve un invito'),
+              OutlinedButton(
+                onPressed: _isLoading ? null : () => context.go('/register'),
+                child: const Text('Crea un nuovo account'),
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _InvitationAccessCard extends StatelessWidget {
+  const _InvitationAccessCard({
+    required this.showCodeField,
+    required this.controller,
+    required this.isLoading,
+    required this.onToggleCodeField,
+    required this.onOpenInvitation,
+  });
+
+  final bool showCodeField;
+  final TextEditingController controller;
+  final bool isLoading;
+  final VoidCallback onToggleCodeField;
+  final VoidCallback onOpenInvitation;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.mark_email_read_outlined,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Hai ricevuto un invito?',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Puoi aprire il link ricevuto via email oppure inserire qui il codice/link dell’invito.',
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: const Color(0xFF52616B)),
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: isLoading ? null : onToggleCodeField,
+              icon: Icon(
+                showCodeField
+                    ? Icons.keyboard_arrow_up
+                    : Icons.confirmation_number_outlined,
+              ),
+              label: Text(
+                showCodeField
+                    ? 'Nascondi codice invito'
+                    : 'Inserisci codice invito',
+              ),
+            ),
+            if (showCodeField) ...[
+              const SizedBox(height: 12),
+              TextField(
+                controller: controller,
+                enabled: !isLoading,
+                decoration: const InputDecoration(
+                  labelText: 'Codice o link invito',
+                  hintText: 'clubmanager-sport://app/invite/...',
+                  prefixIcon: Icon(Icons.link_outlined),
+                ),
+                minLines: 1,
+                maxLines: 3,
+              ),
+              const SizedBox(height: 12),
+              FilledButton.icon(
+                onPressed: isLoading ? null : onOpenInvitation,
+                icon: const Icon(Icons.open_in_new_outlined),
+                label: const Text('Apri invito'),
+              ),
+            ],
+          ],
         ),
       ),
     );

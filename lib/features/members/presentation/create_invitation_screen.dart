@@ -106,27 +106,50 @@ class _CreateInvitationScreenState
       expiresAt: DateTime.now().add(const Duration(days: 14)),
     );
 
-    final result = await invitationRepository.createInvitation(request);
+    final createResult = await invitationRepository.createInvitation(request);
 
     if (!mounted) {
       return;
     }
 
-    setState(() {
-      _isLoading = false;
-    });
-
-    switch (result) {
-      case AppSuccess():
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Invito creato correttamente.')),
-        );
-        context.pop();
-
+    switch (createResult) {
       case AppFailure(:final message):
+        setState(() {
+          _isLoading = false;
+        });
+
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text(message)));
+
+      case AppSuccess(data: final invitationId):
+        final emailResult = await invitationRepository.sendInvitationEmail(
+          invitationId: invitationId,
+        );
+
+        if (!mounted) {
+          return;
+        }
+
+        setState(() {
+          _isLoading = false;
+        });
+
+        switch (emailResult) {
+          case AppSuccess():
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Invito creato ed email inviata.')),
+            );
+
+          case AppFailure(:final message):
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Invito creato, ma email non inviata: $message'),
+              ),
+            );
+        }
+
+        context.pop();
     }
   }
 
@@ -155,7 +178,7 @@ class _CreateInvitationScreenState
               ),
               const SizedBox(height: 8),
               Text(
-                'Crea un invito con ruolo assegnato. L’invio email automatico verrà configurato nella fase notifiche/email.',
+                'Crea un invito con ruolo assegnato. L’email verrà inviata automaticamente se il provider email è configurato.',
                 style: Theme.of(
                   context,
                 ).textTheme.bodyLarge?.copyWith(color: const Color(0xFF52616B)),
@@ -240,7 +263,7 @@ class _CreateInvitationScreenState
                       initialValue: _selectedTeamId,
                       decoration: const InputDecoration(
                         labelText: 'Squadra',
-                        helperText: 'Opzionale in questa fase.',
+                        helperText: 'Opzionale.',
                         prefixIcon: Icon(Icons.groups_2_outlined),
                       ),
                       items: [
@@ -266,7 +289,7 @@ class _CreateInvitationScreenState
                 ),
               const SizedBox(height: 28),
               AppPrimaryButton(
-                label: 'Crea invito',
+                label: 'Crea e invia invito',
                 isLoading: _isLoading,
                 onPressed: _submit,
               ),

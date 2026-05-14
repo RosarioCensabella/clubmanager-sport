@@ -7,6 +7,11 @@ import '../domain/auth_user.dart';
 class AuthRepository {
   AuthRepository();
 
+  static const String _authRedirectUrl = String.fromEnvironment(
+    'AUTH_REDIRECT_URL',
+    defaultValue: 'clubmanager-sport://app/auth/callback',
+  );
+
   SupabaseClient get _client => SupabaseService.client;
 
   bool get isConfigured => SupabaseService.isConfigured;
@@ -97,6 +102,7 @@ class AuthRepository {
       final response = await _client.auth.signUp(
         email: email.trim(),
         password: password,
+        emailRedirectTo: _authRedirectUrl,
         data: {'first_name': firstName.trim(), 'last_name': lastName.trim()},
       );
 
@@ -130,7 +136,10 @@ class AuthRepository {
     }
 
     try {
-      await _client.auth.resetPasswordForEmail(email.trim());
+      await _client.auth.resetPasswordForEmail(
+        email.trim(),
+        redirectTo: _authRedirectUrl,
+      );
 
       return const AppSuccess(null);
     } on AuthException catch (error) {
@@ -170,7 +179,7 @@ class AuthRepository {
     }
 
     if (message.contains('email not confirmed')) {
-      return 'Devi confermare la tua email prima di accedere.';
+      return 'Devi confermare la tua email prima di accedere. Apri la mail di verifica ricevuta dopo la registrazione.';
     }
 
     if (message.contains('user already registered')) {

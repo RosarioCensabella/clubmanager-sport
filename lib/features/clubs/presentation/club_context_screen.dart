@@ -5,9 +5,9 @@ import 'package:go_router/go_router.dart';
 import '../../../core/permissions/app_permission.dart';
 import '../../../core/permissions/permission_policy.dart';
 import '../../../core/utils/app_result.dart';
-import '../../../core/widgets/app_empty_state.dart';
 import '../../../core/widgets/app_error_view.dart';
 import '../../../core/widgets/app_loading_view.dart';
+import '../../members/presentation/invitation_providers.dart';
 import '../domain/club_membership_summary.dart';
 import 'club_context_providers.dart';
 
@@ -62,6 +62,73 @@ class _ClubContextScreenState extends ConsumerState<ClubContextScreen> {
     context.push('/profile');
   }
 
+  Future<void> _openInvitationDialog() async {
+    String invitationValue = '';
+
+    final rawValue = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Accetta invito'),
+          content: TextField(
+            autofocus: true,
+            decoration: const InputDecoration(
+              labelText: 'Codice o link invito',
+              hintText: 'clubmanager-sport://app/invite/...',
+              prefixIcon: Icon(Icons.link_outlined),
+            ),
+            minLines: 1,
+            maxLines: 3,
+            onChanged: (value) {
+              invitationValue = value;
+            },
+            onSubmitted: (value) {
+              Navigator.of(dialogContext).pop(value);
+            },
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Annulla'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(invitationValue),
+              child: const Text('Continua'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (!mounted || rawValue == null) {
+      return;
+    }
+
+    final repository = ref.read(invitationRepositoryProvider);
+    final token = repository.extractInvitationToken(rawValue);
+
+    if (token.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Codice invito non valido.')),
+      );
+      return;
+    }
+
+    await repository.savePendingInvitationToken(token);
+
+    if (!mounted) {
+      return;
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+
+      context.go('/invite/${Uri.encodeComponent(token)}');
+    });
+  }
+
   bool get _hasActiveClub => _activeClubId != null && _activeClubId!.isNotEmpty;
 
   @override
@@ -106,13 +173,10 @@ class _ClubContextScreenState extends ConsumerState<ClubContextScreen> {
 
             case AppSuccess(:final data):
               if (data.isEmpty) {
-                return AppEmptyState(
-                  icon: Icons.shield_outlined,
-                  title: 'Nessun club collegato',
-                  message:
-                      'Il tuo account è attivo, ma non appartieni ancora a un club. Puoi creare il tuo club o accettare un invito.',
-                  actionLabel: 'Crea club',
-                  onActionPressed: _goToCreateClub,
+                return _NoClubConnectedView(
+                  onAcceptInvitationPressed: _openInvitationDialog,
+                  onCreateClubPressed: _goToCreateClub,
+                  onProfilePressed: _goToProfile,
                 );
               }
 
@@ -155,9 +219,72 @@ class _ClubContextScreenState extends ConsumerState<ClubContextScreen> {
         },
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: _goToCreateClub,
-        icon: const Icon(Icons.add),
-        label: const Text('Crea club'),
+        onPressed: _openInvitationDialog,
+        icon: const Icon(Icons.mark_email_read_outlined),
+        label: const Text('Accetta invito'),
+      ),
+    );
+  }
+}
+
+class _NoClubConnectedView extends StatelessWidget {
+  const _NoClubConnectedView({
+    required this.onAcceptInvitationPressed,
+    required this.onCreateClubPressed,
+    required this.onProfilePressed,
+  });
+
+  final VoidCallback onAcceptInvitationPressed;
+  final VoidCallback onCreateClubPressed;
+  final VoidCallback onProfilePressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      minimum: const EdgeInsets.all(24),
+      child: ListView(
+        children: [
+          const SizedBox(height: 90),
+          Icon(
+            Icons.shield_outlined,
+            size: 80,
+            color: Theme.of(context).colorScheme.primary,
+          ),
+          const SizedBox(height: 22),
+          Text(
+            'Nessun club collegato',
+            textAlign: TextAlign.center,
+            style: Theme.of(
+              context,
+            ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Il tuo account è attivo, ma non appartieni ancora a un club. Accetta l’invito ricevuto dal club per entrare nel workspace corretto.',
+            textAlign: TextAlign.center,
+            style: Theme.of(
+              context,
+            ).textTheme.bodyLarge?.copyWith(color: const Color(0xFF52616B)),
+          ),
+          const SizedBox(height: 24),
+          FilledButton.icon(
+            onPressed: onAcceptInvitationPressed,
+            icon: const Icon(Icons.mark_email_read_outlined),
+            label: const Text('Accetta invito'),
+          ),
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+            onPressed: onProfilePressed,
+            icon: const Icon(Icons.account_circle_outlined),
+            label: const Text('Profilo utente'),
+          ),
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+            onPressed: onCreateClubPressed,
+            icon: const Icon(Icons.add_business_outlined),
+            label: const Text('Crea club'),
+          ),
+        ],
       ),
     );
   }

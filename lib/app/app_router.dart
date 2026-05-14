@@ -3,8 +3,10 @@ import 'package:go_router/go_router.dart';
 import '../features/athletes/presentation/athlete_detail_screen.dart';
 import '../features/athletes/presentation/athletes_screen.dart';
 import '../features/athletes/presentation/create_athlete_screen.dart';
+import '../features/athletes/presentation/edit_athlete_screen.dart';
 import '../features/athletes/presentation/link_parent_screen.dart';
 import '../features/attendance/presentation/attendance_screen.dart';
+import '../features/auth/presentation/auth_callback_screen.dart';
 import '../features/auth/presentation/login_screen.dart';
 import '../features/auth/presentation/register_screen.dart';
 import '../features/auth/presentation/reset_password_screen.dart';
@@ -36,11 +38,10 @@ import '../features/settings/presentation/settings_screen.dart';
 import '../features/splash/presentation/splash_screen.dart';
 import '../features/support/presentation/support_screen.dart';
 import '../features/teams/presentation/create_team_screen.dart';
-import '../features/teams/presentation/teams_screen.dart';
-import '../features/welcome/presentation/welcome_screen.dart';
 import '../features/teams/presentation/edit_team_screen.dart';
 import '../features/teams/presentation/team_detail_screen.dart';
-import '../features/athletes/presentation/edit_athlete_screen.dart';
+import '../features/teams/presentation/teams_screen.dart';
+import '../features/welcome/presentation/welcome_screen.dart';
 
 final GoRouter appRouter = GoRouter(
   initialLocation: '/',
@@ -64,6 +65,11 @@ final GoRouter appRouter = GoRouter(
       path: '/register',
       name: 'register',
       builder: (context, state) => const RegisterScreen(),
+    ),
+    GoRoute(
+      path: '/auth/callback',
+      name: 'auth-callback',
+      builder: (context, state) => const AuthCallbackScreen(),
     ),
     GoRoute(
       path: '/invite/:token',
@@ -160,7 +166,6 @@ final GoRouter appRouter = GoRouter(
       name: 'teams-create',
       builder: (context, state) => const CreateTeamScreen(),
     ),
-
     GoRoute(
       path: '/teams/:teamId',
       name: 'team-detail',
@@ -179,7 +184,6 @@ final GoRouter appRouter = GoRouter(
         return EditTeamScreen(teamId: teamId);
       },
     ),
-
     GoRoute(
       path: '/invitations',
       name: 'invitations',
@@ -200,7 +204,6 @@ final GoRouter appRouter = GoRouter(
       name: 'athletes-create',
       builder: (context, state) => const CreateAthleteScreen(),
     ),
-
     GoRoute(
       path: '/athletes/:athleteId/edit',
       name: 'athlete-edit',
@@ -210,7 +213,6 @@ final GoRouter appRouter = GoRouter(
         return EditAthleteScreen(athleteId: athleteId);
       },
     ),
-
     GoRoute(
       path: '/athletes/:athleteId',
       name: 'athlete-detail',

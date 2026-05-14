@@ -54,9 +54,7 @@ class TeamRepository {
     }
   }
 
-  Future<AppResult<TeamDetail>> fetchTeamById({
-    required String teamId,
-  }) async {
+  Future<AppResult<TeamDetail>> fetchTeamById({required String teamId}) async {
     if (!SupabaseService.isConfigured) {
       return const AppFailure(
         'Supabase non è configurato.',
@@ -65,10 +63,7 @@ class TeamRepository {
     }
 
     if (teamId.trim().isEmpty) {
-      return const AppFailure(
-        'Squadra non valida.',
-        code: 'invalid_team_id',
-      );
+      return const AppFailure('Squadra non valida.', code: 'invalid_team_id');
     }
 
     try {
@@ -152,14 +147,14 @@ class TeamRepository {
     }
 
     if (teamId.trim().isEmpty) {
-      return const AppFailure(
-        'Squadra non valida.',
-        code: 'invalid_team_id',
-      );
+      return const AppFailure('Squadra non valida.', code: 'invalid_team_id');
     }
 
     try {
-      await _client.from('teams').update(request.toUpdateMap()).eq('id', teamId);
+      await _client
+          .from('teams')
+          .update(request.toUpdateMap())
+          .eq('id', teamId);
 
       return const AppSuccess(null);
     } on PostgrestException catch (error) {
@@ -193,21 +188,21 @@ class TeamRepository {
     }
 
     if (teamId.trim().isEmpty) {
-      return const AppFailure(
-        'Squadra non valida.',
-        code: 'invalid_team_id',
-      );
+      return const AppFailure('Squadra non valida.', code: 'invalid_team_id');
     }
 
     final now = DateTime.now().toUtc().toIso8601String();
 
     try {
-      await _client.from('teams').update({
-        'deleted_at': now,
-        'archived_at': now,
-        'archived_by': user.id,
-        'archive_reason': _nullableTrim(reason),
-      }).eq('id', teamId);
+      await _client
+          .from('teams')
+          .update({
+            'deleted_at': now,
+            'archived_at': now,
+            'archived_by': user.id,
+            'archive_reason': _nullableTrim(reason),
+          })
+          .eq('id', teamId);
 
       return const AppSuccess(null);
     } on PostgrestException catch (error) {

@@ -12,10 +12,7 @@ import '../domain/update_team_request.dart';
 import 'team_providers.dart';
 
 class EditTeamScreen extends ConsumerStatefulWidget {
-  const EditTeamScreen({
-    super.key,
-    required this.teamId,
-  });
+  const EditTeamScreen({super.key, required this.teamId});
 
   final String teamId;
 
@@ -59,7 +56,9 @@ class _EditTeamScreenState extends ConsumerState<EditTeamScreen> {
   }
 
   Future<AppResult<TeamDetail>> _load() {
-    return ref.read(teamRepositoryProvider).fetchTeamById(teamId: widget.teamId);
+    return ref
+        .read(teamRepositoryProvider)
+        .fetchTeamById(teamId: widget.teamId);
   }
 
   void _fillForm(TeamDetail team) {
@@ -111,10 +110,9 @@ class _EditTeamScreenState extends ConsumerState<EditTeamScreen> {
       color: _colorController.text,
     );
 
-    final result = await ref.read(teamRepositoryProvider).updateTeam(
-          teamId: widget.teamId,
-          request: request,
-        );
+    final result = await ref
+        .read(teamRepositoryProvider)
+        .updateTeam(teamId: widget.teamId, request: request);
 
     if (!mounted) {
       return;
@@ -132,9 +130,9 @@ class _EditTeamScreenState extends ConsumerState<EditTeamScreen> {
         context.pop();
 
       case AppFailure(:final message):
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(message)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(message)));
     }
   }
 
@@ -179,17 +177,15 @@ class _EditTeamScreenState extends ConsumerState<EditTeamScreen> {
                     children: [
                       Text(
                         'Dati squadra',
-                        style:
-                            Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                  fontWeight: FontWeight.w900,
-                                ),
+                        style: Theme.of(context).textTheme.headlineSmall
+                            ?.copyWith(fontWeight: FontWeight.w900),
                       ),
                       const SizedBox(height: 8),
                       Text(
                         'Aggiorna le informazioni principali della squadra.',
                         style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                              color: const Color(0xFF52616B),
-                            ),
+                          color: const Color(0xFF52616B),
+                        ),
                       ),
                       const SizedBox(height: 24),
                       TextFormField(

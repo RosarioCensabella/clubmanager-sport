@@ -156,3 +156,4 @@ dist/
 
 # Codemagic / CI local artifacts
 codemagic.yaml.local
+seed-output/

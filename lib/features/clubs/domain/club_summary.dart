@@ -6,6 +6,7 @@ class ClubSummary {
     required this.city,
     this.logoUrl,
     this.primaryColor,
+    this.deletedAt,
   });
 
   final String id;
@@ -14,6 +15,9 @@ class ClubSummary {
   final String city;
   final String? logoUrl;
   final String? primaryColor;
+  final DateTime? deletedAt;
+
+  bool get isArchived => deletedAt != null;
 
   factory ClubSummary.fromMap(Map<String, dynamic> map) {
     return ClubSummary(
@@ -23,6 +27,7 @@ class ClubSummary {
       city: (map['city'] ?? '').toString(),
       logoUrl: map['logo_url']?.toString(),
       primaryColor: map['primary_color']?.toString(),
+      deletedAt: DateTime.tryParse((map['deleted_at'] ?? '').toString()),
     );
   }
 }

@@ -10,7 +10,10 @@ import '../features/auth/presentation/register_screen.dart';
 import '../features/auth/presentation/reset_password_screen.dart';
 import '../features/callups/presentation/add_callups_screen.dart';
 import '../features/clubs/presentation/club_context_screen.dart';
+import '../features/clubs/presentation/club_detail_screen.dart';
+import '../features/clubs/presentation/club_workspace_screen.dart';
 import '../features/clubs/presentation/create_club_screen.dart';
+import '../features/clubs/presentation/edit_club_screen.dart';
 import '../features/communications/presentation/communication_detail_screen.dart';
 import '../features/communications/presentation/communications_screen.dart';
 import '../features/communications/presentation/create_communication_screen.dart';
@@ -25,6 +28,7 @@ import '../features/fees/presentation/fees_screen.dart';
 import '../features/legal/presentation/legal_center_screen.dart';
 import '../features/legal/presentation/legal_document_screen.dart';
 import '../features/members/presentation/create_invitation_screen.dart';
+import '../features/members/presentation/invitation_acceptance_screen.dart';
 import '../features/members/presentation/invitations_screen.dart';
 import '../features/privacy/presentation/privacy_screen.dart';
 import '../features/profile/presentation/profile_screen.dart';
@@ -34,8 +38,6 @@ import '../features/support/presentation/support_screen.dart';
 import '../features/teams/presentation/create_team_screen.dart';
 import '../features/teams/presentation/teams_screen.dart';
 import '../features/welcome/presentation/welcome_screen.dart';
-import '../features/members/presentation/invitation_acceptance_screen.dart';
-import '../features/clubs/presentation/club_workspace_screen.dart';
 
 final GoRouter appRouter = GoRouter(
   initialLocation: '/',
@@ -60,7 +62,6 @@ final GoRouter appRouter = GoRouter(
       name: 'register',
       builder: (context, state) => const RegisterScreen(),
     ),
-
     GoRoute(
       path: '/invite/:token',
       name: 'invite',
@@ -70,7 +71,6 @@ final GoRouter appRouter = GoRouter(
         return InvitationAcceptanceScreen(token: token);
       },
     ),
-
     GoRoute(
       path: '/reset-password',
       name: 'reset-password',
@@ -120,7 +120,24 @@ final GoRouter appRouter = GoRouter(
       name: 'clubs-create',
       builder: (context, state) => const CreateClubScreen(),
     ),
+    GoRoute(
+      path: '/clubs/:clubId',
+      name: 'club-detail',
+      builder: (context, state) {
+        final clubId = state.pathParameters['clubId'] ?? '';
 
+        return ClubDetailScreen(clubId: clubId);
+      },
+    ),
+    GoRoute(
+      path: '/clubs/:clubId/edit',
+      name: 'club-edit',
+      builder: (context, state) {
+        final clubId = state.pathParameters['clubId'] ?? '';
+
+        return EditClubScreen(clubId: clubId);
+      },
+    ),
     GoRoute(
       path: '/clubs/:clubId/workspace',
       name: 'club-workspace',
@@ -130,7 +147,6 @@ final GoRouter appRouter = GoRouter(
         return ClubWorkspaceScreen(clubId: clubId);
       },
     ),
-
     GoRoute(
       path: '/teams',
       name: 'teams',

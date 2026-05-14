@@ -67,6 +67,10 @@ class _ClubWorkspaceScreenState extends ConsumerState<ClubWorkspaceScreen> {
     context.go('/club-context');
   }
 
+  void _goToClubDetails() {
+    context.push('/clubs/${widget.clubId}');
+  }
+
   void _goToProfile() {
     context.push('/profile');
   }
@@ -167,6 +171,11 @@ class _ClubWorkspaceScreenState extends ConsumerState<ClubWorkspaceScreen> {
                       _WorkspaceHeaderCard(membership: data),
                       const SizedBox(height: 12),
                       _DashboardProfileCard(profile: profile),
+                      const SizedBox(height: 12),
+                      _ClubDetailsEntryCard(
+                        profile: profile,
+                        onOpenPressed: _goToClubDetails,
+                      ),
                       const SizedBox(height: 12),
                       if (profile.isManagementDashboard)
                         _ManagementDashboardCard(
@@ -324,6 +333,64 @@ class _DashboardProfileCard extends StatelessWidget {
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: const Color(0xFF52616B),
                     ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ClubDetailsEntryCard extends StatelessWidget {
+  const _ClubDetailsEntryCard({
+    required this.profile,
+    required this.onOpenPressed,
+  });
+
+  final ClubDashboardProfile profile;
+  final VoidCallback onOpenPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(
+              Icons.admin_panel_settings_outlined,
+              color: Theme.of(context).colorScheme.primary,
+              size: 30,
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Gestione dati club',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    profile.canManageClub
+                        ? 'Apri dettagli, modifica dati o archivia il club.'
+                        : 'Consulta i dati principali del club. Modifiche riservate agli amministratori.',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: const Color(0xFF52616B),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  FilledButton.icon(
+                    onPressed: onOpenPressed,
+                    icon: const Icon(Icons.open_in_new),
+                    label: const Text('Apri gestione club'),
                   ),
                 ],
               ),

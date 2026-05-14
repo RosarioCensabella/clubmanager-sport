@@ -7,6 +7,7 @@ import '../../../core/permissions/permission_policy.dart';
 import '../../../core/utils/app_result.dart';
 import '../../../core/widgets/app_error_view.dart';
 import '../../../core/widgets/app_loading_view.dart';
+import '../domain/club_dashboard_profile.dart';
 import '../domain/club_membership_summary.dart';
 import 'club_context_providers.dart';
 
@@ -136,6 +137,7 @@ class _ClubWorkspaceScreenState extends ConsumerState<ClubWorkspaceScreen> {
             final permissions = PermissionPolicy.allowedPermissionsFor(
               data.role,
             );
+            final profile = ClubDashboardProfile.fromMembership(data);
 
             return Scaffold(
               appBar: AppBar(
@@ -164,17 +166,31 @@ class _ClubWorkspaceScreenState extends ConsumerState<ClubWorkspaceScreen> {
                     children: [
                       _WorkspaceHeaderCard(membership: data),
                       const SizedBox(height: 12),
-                      _ManagementGrid(
-                        onTeamsPressed: _goToTeams,
-                        onAthletesPressed: _goToAthletes,
-                        onInvitationsPressed: _goToInvitations,
-                        onEventsPressed: _goToEvents,
-                        onCommunicationsPressed: _goToCommunications,
-                        onDocumentsPressed: _goToDocuments,
-                        onFeesPressed: _goToFees,
-                      ),
+                      _DashboardProfileCard(profile: profile),
+                      const SizedBox(height: 12),
+                      if (profile.isManagementDashboard)
+                        _ManagementDashboardCard(
+                          profile: profile,
+                          onTeamsPressed: _goToTeams,
+                          onAthletesPressed: _goToAthletes,
+                          onInvitationsPressed: _goToInvitations,
+                          onEventsPressed: _goToEvents,
+                          onCommunicationsPressed: _goToCommunications,
+                          onDocumentsPressed: _goToDocuments,
+                          onFeesPressed: _goToFees,
+                        )
+                      else
+                        _UserDashboardCard(
+                          profile: profile,
+                          onEventsPressed: _goToEvents,
+                          onCommunicationsPressed: _goToCommunications,
+                          onDocumentsPressed: _goToDocuments,
+                          onFeesPressed: _goToFees,
+                          onSettingsPressed: _goToSettings,
+                        ),
                       const SizedBox(height: 12),
                       _ClubOperationsCard(
+                        profile: profile,
                         onClubSelectionPressed: _goToClubSelection,
                         onSettingsPressed: _goToSettings,
                       ),
@@ -268,8 +284,60 @@ class _WorkspaceHeaderCard extends StatelessWidget {
   }
 }
 
-class _ManagementGrid extends StatelessWidget {
-  const _ManagementGrid({
+class _DashboardProfileCard extends StatelessWidget {
+  const _DashboardProfileCard({required this.profile});
+
+  final ClubDashboardProfile profile;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      color: profile.isManagementDashboard
+          ? Theme.of(context).colorScheme.primaryContainer
+          : null,
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(
+              profile.isManagementDashboard
+                  ? Icons.dashboard_customize_outlined
+                  : Icons.person_outline,
+              color: Theme.of(context).colorScheme.primary,
+              size: 32,
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    profile.title,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    profile.description,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: const Color(0xFF52616B),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ManagementDashboardCard extends StatelessWidget {
+  const _ManagementDashboardCard({
+    required this.profile,
     required this.onTeamsPressed,
     required this.onAthletesPressed,
     required this.onInvitationsPressed,
@@ -279,6 +347,7 @@ class _ManagementGrid extends StatelessWidget {
     required this.onFeesPressed,
   });
 
+  final ClubDashboardProfile profile;
   final VoidCallback onTeamsPressed;
   final VoidCallback onAthletesPressed;
   final VoidCallback onInvitationsPressed;
@@ -296,14 +365,14 @@ class _ManagementGrid extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Gestione club',
+              profile.primaryActionLabel,
               style: Theme.of(
                 context,
               ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900),
             ),
             const SizedBox(height: 6),
             Text(
-              'Scegli l’area su cui vuoi lavorare per questo club.',
+              'Le azioni disponibili dipendono dal ruolo nel club. I permessi granulari saranno completati nelle prossime fasi.',
               style: Theme.of(
                 context,
               ).textTheme.bodyMedium?.copyWith(color: const Color(0xFF52616B)),
@@ -313,49 +382,145 @@ class _ManagementGrid extends StatelessWidget {
               icon: Icons.groups_2_outlined,
               title: 'Squadre',
               subtitle: 'Gestisci squadre, staff e assegnazioni.',
+              enabled: profile.canManageTeams,
+              disabledReason: 'Non disponibile per questo ruolo.',
               onTap: onTeamsPressed,
             ),
             _WorkspaceActionTile(
               icon: Icons.directions_run_outlined,
               title: 'Atleti',
               subtitle: 'Anagrafiche, tutori, squadre e dettagli atleta.',
+              enabled: profile.canManageAthletes,
+              disabledReason: 'Non disponibile per questo ruolo.',
               onTap: onAthletesPressed,
             ),
             _WorkspaceActionTile(
               icon: Icons.person_add_alt_1_outlined,
               title: 'Inviti e accessi',
               subtitle: 'Invita utenti e prepara accessi controllati.',
+              enabled: profile.canManageInvitations,
+              disabledReason:
+                  'Solo proprietario o amministratore del club può gestire inviti.',
               onTap: onInvitationsPressed,
             ),
             _WorkspaceActionTile(
               icon: Icons.event_outlined,
               title: 'Eventi e convocazioni',
               subtitle: 'Calendario, partite, allenamenti e RSVP.',
-              onTap: onEventsPressed,
-            ),
-            _WorkspaceActionTile(
-              icon: Icons.fact_check_outlined,
-              title: 'Presenze',
-              subtitle: 'Apri le presenze dai dettagli evento.',
+              enabled: profile.canManageEvents,
+              disabledReason: 'Non disponibile per questo ruolo.',
               onTap: onEventsPressed,
             ),
             _WorkspaceActionTile(
               icon: Icons.campaign_outlined,
               title: 'Comunicazioni',
               subtitle: 'Avvisi e messaggi operativi del club.',
+              enabled: profile.canManageCommunications,
+              disabledReason: 'Non disponibile per questo ruolo.',
               onTap: onCommunicationsPressed,
             ),
             _WorkspaceActionTile(
               icon: Icons.folder_copy_outlined,
               title: 'Documenti e scadenze',
               subtitle: 'Certificati, file e promemoria documentali.',
+              enabled: profile.canManageDocuments,
+              disabledReason: 'Non disponibile per questo ruolo.',
               onTap: onDocumentsPressed,
             ),
             _WorkspaceActionTile(
               icon: Icons.payments_outlined,
               title: 'Quote associative',
               subtitle: 'Quote, assegnazioni e pagamenti parziali.',
+              enabled: profile.canManageFees,
+              disabledReason:
+                  'La gestione quote è riservata ad amministratori o ruoli abilitati.',
               onTap: onFeesPressed,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _UserDashboardCard extends StatelessWidget {
+  const _UserDashboardCard({
+    required this.profile,
+    required this.onEventsPressed,
+    required this.onCommunicationsPressed,
+    required this.onDocumentsPressed,
+    required this.onFeesPressed,
+    required this.onSettingsPressed,
+  });
+
+  final ClubDashboardProfile profile;
+  final VoidCallback onEventsPressed;
+  final VoidCallback onCommunicationsPressed;
+  final VoidCallback onDocumentsPressed;
+  final VoidCallback onFeesPressed;
+  final VoidCallback onSettingsPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              profile.primaryActionLabel,
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Questa area è pensata per consultare le informazioni del club. La selezione figlio/atleta sarà completata nelle prossime fasi.',
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: const Color(0xFF52616B)),
+            ),
+            const SizedBox(height: 16),
+            _WorkspaceActionTile(
+              icon: Icons.event_outlined,
+              title: 'Eventi e convocazioni',
+              subtitle: 'Consulta calendario, convocazioni e RSVP.',
+              enabled: profile.canManageEvents,
+              disabledReason: 'Non disponibile per questo ruolo.',
+              onTap: onEventsPressed,
+            ),
+            _WorkspaceActionTile(
+              icon: Icons.campaign_outlined,
+              title: 'Comunicazioni',
+              subtitle: 'Leggi avvisi e messaggi del club.',
+              enabled: profile.canManageCommunications,
+              disabledReason: 'Non disponibile per questo ruolo.',
+              onTap: onCommunicationsPressed,
+            ),
+            _WorkspaceActionTile(
+              icon: Icons.folder_copy_outlined,
+              title: 'Documenti',
+              subtitle: 'Consulta documenti e scadenze.',
+              enabled: profile.canManageDocuments,
+              disabledReason: 'Non disponibile per questo ruolo.',
+              onTap: onDocumentsPressed,
+            ),
+            _WorkspaceActionTile(
+              icon: Icons.payments_outlined,
+              title: 'Quote',
+              subtitle: 'Consulta quote e stato pagamenti collegati.',
+              enabled: profile.canManageFees,
+              disabledReason: 'Non disponibile per questo ruolo.',
+              onTap: onFeesPressed,
+            ),
+            _WorkspaceActionTile(
+              icon: Icons.settings_outlined,
+              title: 'Impostazioni account',
+              subtitle: 'Profilo, notifiche, privacy e supporto.',
+              enabled: true,
+              disabledReason: '',
+              onTap: onSettingsPressed,
             ),
           ],
         ),
@@ -369,28 +534,40 @@ class _WorkspaceActionTile extends StatelessWidget {
     required this.icon,
     required this.title,
     required this.subtitle,
+    required this.enabled,
+    required this.disabledReason,
     required this.onTap,
   });
 
   final IconData icon;
   final String title;
   final String subtitle;
+  final bool enabled;
+  final String disabledReason;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
+    final effectiveSubtitle = enabled ? subtitle : disabledReason;
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: ListTile(
+        enabled: enabled,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
           side: const BorderSide(color: Color(0xFFE0E6ED)),
         ),
-        leading: Icon(icon, color: Theme.of(context).colorScheme.primary),
+        leading: Icon(
+          icon,
+          color: enabled
+              ? Theme.of(context).colorScheme.primary
+              : const Color(0xFF9E9E9E),
+        ),
         title: Text(title),
-        subtitle: Text(subtitle),
+        subtitle: Text(effectiveSubtitle),
         trailing: const Icon(Icons.chevron_right),
-        onTap: onTap,
+        onTap: enabled ? onTap : null,
       ),
     );
   }
@@ -398,10 +575,12 @@ class _WorkspaceActionTile extends StatelessWidget {
 
 class _ClubOperationsCard extends StatelessWidget {
   const _ClubOperationsCard({
+    required this.profile,
     required this.onClubSelectionPressed,
     required this.onSettingsPressed,
   });
 
+  final ClubDashboardProfile profile;
   final VoidCallback onClubSelectionPressed;
   final VoidCallback onSettingsPressed;
 
@@ -433,7 +612,9 @@ class _ClubOperationsCard extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             Text(
-              'La modifica dati club, archiviazione club e gestione membri saranno completate nella fase dedicata alla gestione club.',
+              profile.canManageClub
+                  ? 'La modifica dati club, archiviazione club e gestione membri saranno completate nella fase dedicata alla gestione club.'
+                  : 'La gestione dei dati del club è riservata a proprietari e amministratori.',
               style: Theme.of(
                 context,
               ).textTheme.bodySmall?.copyWith(color: const Color(0xFF52616B)),

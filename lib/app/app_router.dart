@@ -42,6 +42,10 @@ import '../features/teams/presentation/edit_team_screen.dart';
 import '../features/teams/presentation/team_detail_screen.dart';
 import '../features/teams/presentation/teams_screen.dart';
 import '../features/welcome/presentation/welcome_screen.dart';
+import '../features/members/presentation/assign_team_member_screen.dart';
+import '../features/members/presentation/link_athlete_account_screen.dart';
+import '../features/members/presentation/link_parent_relation_screen.dart';
+import '../features/members/presentation/members_screen.dart';
 
 final GoRouter appRouter = GoRouter(
   initialLocation: '/',
@@ -194,6 +198,28 @@ final GoRouter appRouter = GoRouter(
       name: 'invitations-create',
       builder: (context, state) => const CreateInvitationScreen(),
     ),
+
+    GoRoute(
+      path: '/members',
+      name: 'members',
+      builder: (context, state) => const MembersScreen(),
+    ),
+    GoRoute(
+      path: '/members/assign-team',
+      name: 'members-assign-team',
+      builder: (context, state) => const AssignTeamMemberScreen(),
+    ),
+    GoRoute(
+      path: '/members/link-parent',
+      name: 'members-link-parent',
+      builder: (context, state) => const LinkParentRelationScreen(),
+    ),
+    GoRoute(
+      path: '/members/link-athlete-account',
+      name: 'members-link-athlete-account',
+      builder: (context, state) => const LinkAthleteAccountScreen(),
+    ),
+
     GoRoute(
       path: '/athletes',
       name: 'athletes',

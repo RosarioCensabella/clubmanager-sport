@@ -9,6 +9,7 @@ import '../../../core/widgets/app_error_view.dart';
 import '../../../core/widgets/app_loading_view.dart';
 import '../domain/club_dashboard_profile.dart';
 import '../domain/club_membership_summary.dart';
+import '../domain/user_operational_context.dart';
 import 'club_context_providers.dart';
 
 class ClubWorkspaceScreen extends ConsumerStatefulWidget {
@@ -22,7 +23,7 @@ class ClubWorkspaceScreen extends ConsumerStatefulWidget {
 }
 
 class _ClubWorkspaceScreenState extends ConsumerState<ClubWorkspaceScreen> {
-  late Future<AppResult<ClubMembershipSummary>> _future;
+  late Future<AppResult<_ClubWorkspaceData>> _future;
 
   @override
   void initState() {
@@ -30,11 +31,11 @@ class _ClubWorkspaceScreenState extends ConsumerState<ClubWorkspaceScreen> {
     _future = _loadWorkspace();
   }
 
-  Future<AppResult<ClubMembershipSummary>> _loadWorkspace() async {
+  Future<AppResult<_ClubWorkspaceData>> _loadWorkspace() async {
     final repository = ref.read(clubContextRepositoryProvider);
-    final result = await repository.fetchMyClubMemberships();
+    final membershipsResult = await repository.fetchMyClubMemberships();
 
-    switch (result) {
+    switch (membershipsResult) {
       case AppFailure(:final message, :final code):
         return AppFailure(message, code: code);
 
@@ -53,8 +54,60 @@ class _ClubWorkspaceScreenState extends ConsumerState<ClubWorkspaceScreen> {
         final membership = matches.first;
         await repository.setActiveClubId(membership.clubId);
 
-        return AppSuccess(membership);
+        final contextsResult = await repository
+            .fetchMyOperationalContextsForClub(membership: membership);
+
+        switch (contextsResult) {
+          case AppFailure(:final message, :final code):
+            return AppFailure(message, code: code);
+
+          case AppSuccess(:final data):
+            final contexts = data;
+            final savedContextId = await repository
+                .getActiveOperationalContextId(clubId: membership.clubId);
+
+            final activeContext = _resolveActiveContext(
+              contexts: contexts,
+              savedContextId: savedContextId,
+            );
+
+            if (activeContext != null) {
+              await repository.setActiveOperationalContextId(
+                clubId: membership.clubId,
+                contextId: activeContext.id,
+              );
+            }
+
+            return AppSuccess(
+              _ClubWorkspaceData(
+                membership: membership,
+                contexts: contexts,
+                activeContext: activeContext,
+              ),
+            );
+        }
     }
+  }
+
+  UserOperationalContext? _resolveActiveContext({
+    required List<UserOperationalContext> contexts,
+    required String? savedContextId,
+  }) {
+    if (contexts.isEmpty) {
+      return null;
+    }
+
+    final saved = savedContextId?.trim();
+
+    if (saved != null && saved.isNotEmpty) {
+      final matches = contexts.where((context) => context.id == saved);
+
+      if (matches.isNotEmpty) {
+        return matches.first;
+      }
+    }
+
+    return contexts.first;
   }
 
   void _reload() {
@@ -83,8 +136,8 @@ class _ClubWorkspaceScreenState extends ConsumerState<ClubWorkspaceScreen> {
     context.push('/teams');
   }
 
-  void _goToInvitations() {
-    context.push('/invitations');
+  void _goToMembers() {
+    context.push('/members');
   }
 
   void _goToAthletes() {
@@ -107,9 +160,96 @@ class _ClubWorkspaceScreenState extends ConsumerState<ClubWorkspaceScreen> {
     context.push('/fees');
   }
 
+  Future<void> _selectOperationalContext(
+    UserOperationalContext selectedContext,
+  ) async {
+    await ref
+        .read(clubContextRepositoryProvider)
+        .setActiveOperationalContextId(
+          clubId: selectedContext.clubId,
+          contextId: selectedContext.id,
+        );
+
+    if (!mounted) {
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Contesto attivo: ${selectedContext.title}')),
+    );
+
+    _reload();
+  }
+
+  Future<void> _showContextSelector(
+    List<UserOperationalContext> contexts,
+    UserOperationalContext? activeContext,
+  ) async {
+    if (contexts.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Nessun contesto disponibile.')),
+      );
+      return;
+    }
+
+    final selectedContext = await showModalBottomSheet<UserOperationalContext>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) {
+        return SafeArea(
+          child: ListView(
+            shrinkWrap: true,
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+            children: [
+              Text(
+                'Scegli contesto operativo',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Il contesto indica se stai lavorando sul club, su una squadra, su un atleta o su un figlio/tutelato.',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: const Color(0xFF52616B),
+                ),
+              ),
+              const SizedBox(height: 16),
+              for (final contextOption in contexts)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: ListTile(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      side: const BorderSide(color: Color(0xFFE0E6ED)),
+                    ),
+                    leading: Icon(_contextIcon(contextOption.type)),
+                    title: Text(contextOption.title),
+                    subtitle: Text(
+                      '${contextOption.typeLabel} · ${contextOption.subtitle}',
+                    ),
+                    trailing: contextOption.id == activeContext?.id
+                        ? const Icon(Icons.check_circle)
+                        : const Icon(Icons.chevron_right),
+                    onTap: () => Navigator.of(context).pop(contextOption),
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
+    );
+
+    if (selectedContext == null) {
+      return;
+    }
+
+    await _selectOperationalContext(selectedContext);
+  }
+
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<AppResult<ClubMembershipSummary>>(
+    return FutureBuilder<AppResult<_ClubWorkspaceData>>(
       future: _future,
       builder: (context, snapshot) {
         final result = snapshot.data;
@@ -138,14 +278,15 @@ class _ClubWorkspaceScreenState extends ConsumerState<ClubWorkspaceScreen> {
             );
 
           case AppSuccess(:final data):
+            final membership = data.membership;
             final permissions = PermissionPolicy.allowedPermissionsFor(
-              data.role,
+              membership.role,
             );
-            final profile = ClubDashboardProfile.fromMembership(data);
+            final profile = ClubDashboardProfile.fromMembership(membership);
 
             return Scaffold(
               appBar: AppBar(
-                title: Text(data.club.name),
+                title: Text(membership.club.name),
                 actions: [
                   IconButton(
                     tooltip: 'Cambia club',
@@ -168,9 +309,21 @@ class _ClubWorkspaceScreenState extends ConsumerState<ClubWorkspaceScreen> {
                   minimum: const EdgeInsets.all(24),
                   child: ListView(
                     children: [
-                      _WorkspaceHeaderCard(membership: data),
+                      _WorkspaceHeaderCard(membership: membership),
                       const SizedBox(height: 12),
-                      _DashboardProfileCard(profile: profile),
+                      _OperationalContextCard(
+                        contexts: data.contexts,
+                        activeContext: data.activeContext,
+                        onChangePressed: () => _showContextSelector(
+                          data.contexts,
+                          data.activeContext,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      _DashboardProfileCard(
+                        profile: profile,
+                        activeContext: data.activeContext,
+                      ),
                       const SizedBox(height: 12),
                       _ClubDetailsEntryCard(
                         profile: profile,
@@ -180,9 +333,10 @@ class _ClubWorkspaceScreenState extends ConsumerState<ClubWorkspaceScreen> {
                       if (profile.isManagementDashboard)
                         _ManagementDashboardCard(
                           profile: profile,
+                          activeContext: data.activeContext,
                           onTeamsPressed: _goToTeams,
                           onAthletesPressed: _goToAthletes,
-                          onInvitationsPressed: _goToInvitations,
+                          onInvitationsPressed: _goToMembers,
                           onEventsPressed: _goToEvents,
                           onCommunicationsPressed: _goToCommunications,
                           onDocumentsPressed: _goToDocuments,
@@ -191,6 +345,7 @@ class _ClubWorkspaceScreenState extends ConsumerState<ClubWorkspaceScreen> {
                       else
                         _UserDashboardCard(
                           profile: profile,
+                          activeContext: data.activeContext,
                           onEventsPressed: _goToEvents,
                           onCommunicationsPressed: _goToCommunications,
                           onDocumentsPressed: _goToDocuments,
@@ -214,6 +369,18 @@ class _ClubWorkspaceScreenState extends ConsumerState<ClubWorkspaceScreen> {
       },
     );
   }
+}
+
+class _ClubWorkspaceData {
+  const _ClubWorkspaceData({
+    required this.membership,
+    required this.contexts,
+    required this.activeContext,
+  });
+
+  final ClubMembershipSummary membership;
+  final List<UserOperationalContext> contexts;
+  final UserOperationalContext? activeContext;
 }
 
 class _WorkspaceHeaderCard extends StatelessWidget {
@@ -293,10 +460,116 @@ class _WorkspaceHeaderCard extends StatelessWidget {
   }
 }
 
+class _OperationalContextCard extends StatelessWidget {
+  const _OperationalContextCard({
+    required this.contexts,
+    required this.activeContext,
+    required this.onChangePressed,
+  });
+
+  final List<UserOperationalContext> contexts;
+  final UserOperationalContext? activeContext;
+  final VoidCallback onChangePressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final selected = activeContext;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(
+              selected == null
+                  ? Icons.account_tree_outlined
+                  : _contextIcon(selected.type),
+              color: Theme.of(context).colorScheme.primary,
+              size: 32,
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Contesto operativo',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  if (selected == null)
+                    Text(
+                      'Nessun contesto specifico selezionato.',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: const Color(0xFF52616B),
+                      ),
+                    )
+                  else ...[
+                    Text(
+                      selected.title,
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${selected.typeLabel} · ${selected.subtitle}',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: const Color(0xFF52616B),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        Chip(
+                          avatar: const Icon(Icons.badge_outlined, size: 18),
+                          label: Text(selected.roleLabel),
+                        ),
+                        if (selected.teamName != null &&
+                            selected.teamName!.trim().isNotEmpty)
+                          Chip(
+                            avatar: const Icon(
+                              Icons.groups_2_outlined,
+                              size: 18,
+                            ),
+                            label: Text(selected.teamName!),
+                          ),
+                      ],
+                    ),
+                  ],
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    onPressed: contexts.length <= 1 ? null : onChangePressed,
+                    icon: const Icon(Icons.swap_horiz_outlined),
+                    label: Text(
+                      contexts.length <= 1
+                          ? 'Un solo contesto disponibile'
+                          : 'Cambia contesto',
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _DashboardProfileCard extends StatelessWidget {
-  const _DashboardProfileCard({required this.profile});
+  const _DashboardProfileCard({
+    required this.profile,
+    required this.activeContext,
+  });
 
   final ClubDashboardProfile profile;
+  final UserOperationalContext? activeContext;
 
   @override
   Widget build(BuildContext context) {
@@ -329,7 +602,7 @@ class _DashboardProfileCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    profile.description,
+                    _descriptionWithContext(),
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: const Color(0xFF52616B),
                     ),
@@ -341,6 +614,16 @@ class _DashboardProfileCard extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  String _descriptionWithContext() {
+    final contextTitle = activeContext?.title;
+
+    if (contextTitle == null || contextTitle.trim().isEmpty) {
+      return profile.description;
+    }
+
+    return '${profile.description}\n\nContesto attivo: $contextTitle.';
   }
 }
 
@@ -405,6 +688,7 @@ class _ClubDetailsEntryCard extends StatelessWidget {
 class _ManagementDashboardCard extends StatelessWidget {
   const _ManagementDashboardCard({
     required this.profile,
+    required this.activeContext,
     required this.onTeamsPressed,
     required this.onAthletesPressed,
     required this.onInvitationsPressed,
@@ -415,6 +699,7 @@ class _ManagementDashboardCard extends StatelessWidget {
   });
 
   final ClubDashboardProfile profile;
+  final UserOperationalContext? activeContext;
   final VoidCallback onTeamsPressed;
   final VoidCallback onAthletesPressed;
   final VoidCallback onInvitationsPressed;
@@ -425,6 +710,8 @@ class _ManagementDashboardCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final contextName = activeContext?.title;
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(18),
@@ -439,7 +726,9 @@ class _ManagementDashboardCard extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             Text(
-              'Le azioni disponibili dipendono dal ruolo nel club. I permessi granulari saranno completati nelle prossime fasi.',
+              contextName == null
+                  ? 'Le azioni disponibili dipendono dal ruolo nel club.'
+                  : 'Stai lavorando nel contesto: $contextName. Le prossime fasi useranno questo contesto per filtrare eventi, documenti, quote e comunicazioni.',
               style: Theme.of(
                 context,
               ).textTheme.bodyMedium?.copyWith(color: const Color(0xFF52616B)),
@@ -461,10 +750,12 @@ class _ManagementDashboardCard extends StatelessWidget {
               disabledReason: 'Non disponibile per questo ruolo.',
               onTap: onAthletesPressed,
             ),
+
             _WorkspaceActionTile(
-              icon: Icons.person_add_alt_1_outlined,
-              title: 'Inviti e accessi',
-              subtitle: 'Invita utenti e prepara accessi controllati.',
+              icon: Icons.people_alt_outlined,
+              title: 'Persone e accessi',
+              subtitle: 'Membri, inviti, genitori, atleti e assegnazioni.',
+
               enabled: profile.canManageInvitations,
               disabledReason:
                   'Solo proprietario o amministratore del club può gestire inviti.',
@@ -513,6 +804,7 @@ class _ManagementDashboardCard extends StatelessWidget {
 class _UserDashboardCard extends StatelessWidget {
   const _UserDashboardCard({
     required this.profile,
+    required this.activeContext,
     required this.onEventsPressed,
     required this.onCommunicationsPressed,
     required this.onDocumentsPressed,
@@ -521,6 +813,7 @@ class _UserDashboardCard extends StatelessWidget {
   });
 
   final ClubDashboardProfile profile;
+  final UserOperationalContext? activeContext;
   final VoidCallback onEventsPressed;
   final VoidCallback onCommunicationsPressed;
   final VoidCallback onDocumentsPressed;
@@ -529,6 +822,8 @@ class _UserDashboardCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final contextName = activeContext?.title;
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(18),
@@ -543,7 +838,9 @@ class _UserDashboardCard extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             Text(
-              'Questa area è pensata per consultare le informazioni del club. La selezione figlio/atleta sarà completata nelle prossime fasi.',
+              contextName == null
+                  ? 'Questa area è pensata per consultare le informazioni del club.'
+                  : 'Stai consultando il contesto: $contextName. Le prossime fasi useranno questa scelta per mostrare solo informazioni pertinenti.',
               style: Theme.of(
                 context,
               ).textTheme.bodyMedium?.copyWith(color: const Color(0xFF52616B)),
@@ -680,7 +977,7 @@ class _ClubOperationsCard extends StatelessWidget {
             const SizedBox(height: 12),
             Text(
               profile.canManageClub
-                  ? 'La modifica dati club, archiviazione club e gestione membri saranno completate nella fase dedicata alla gestione club.'
+                  ? 'La modifica dati club, archiviazione club e gestione membri sono riservate ai ruoli abilitati.'
                   : 'La gestione dei dati del club è riservata a proprietari e amministratori.',
               style: Theme.of(
                 context,
@@ -736,5 +1033,18 @@ class _PermissionsCard extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+IconData _contextIcon(UserOperationalContextType type) {
+  switch (type) {
+    case UserOperationalContextType.club:
+      return Icons.business_outlined;
+    case UserOperationalContextType.team:
+      return Icons.groups_2_outlined;
+    case UserOperationalContextType.athlete:
+      return Icons.directions_run_outlined;
+    case UserOperationalContextType.child:
+      return Icons.family_restroom_outlined;
   }
 }

@@ -8,10 +8,12 @@ class CreateInvitationRequest {
     required this.token,
     required this.expiresAt,
     this.teamId,
+    this.athleteProfileId,
   });
 
   final String clubId;
   final String? teamId;
+  final String? athleteProfileId;
   final String email;
   final ClubRole role;
   final String token;
@@ -21,6 +23,7 @@ class CreateInvitationRequest {
     return {
       'club_id': clubId,
       'team_id': _nullableTrim(teamId),
+      'athlete_profile_id': _nullableTrim(athleteProfileId),
       'email': email.trim().toLowerCase(),
       'role': role.databaseValue,
       'token': token,

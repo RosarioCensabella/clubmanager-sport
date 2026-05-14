@@ -54,6 +54,10 @@ class _TeamsScreenState extends ConsumerState<TeamsScreen> {
     context.push('/teams/create').then((_) => _reload());
   }
 
+  void _goToTeamDetail(TeamSummary team) {
+    context.push('/teams/${team.id}').then((_) => _reload());
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -112,7 +116,10 @@ class _TeamsScreenState extends ConsumerState<TeamsScreen> {
                   itemBuilder: (context, index) {
                     final team = data[index];
 
-                    return _TeamCard(team: team);
+                    return _TeamCard(
+                      team: team,
+                      onTap: () => _goToTeamDetail(team),
+                    );
                   },
                 ),
               );
@@ -129,24 +136,17 @@ class _TeamsScreenState extends ConsumerState<TeamsScreen> {
 }
 
 class _TeamCard extends StatelessWidget {
-  const _TeamCard({required this.team});
+  const _TeamCard({required this.team, required this.onTap});
 
   final TeamSummary team;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     return Card(
       child: InkWell(
         borderRadius: BorderRadius.circular(20),
-        onTap: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                'Dettaglio squadra disponibile nella prossima fase.',
-              ),
-            ),
-          );
-        },
+        onTap: onTap,
         child: Padding(
           padding: const EdgeInsets.all(18),
           child: Row(
@@ -155,9 +155,7 @@ class _TeamCard extends StatelessWidget {
               CircleAvatar(
                 backgroundColor: Theme.of(context).colorScheme.primary,
                 foregroundColor: Colors.white,
-                child: Text(
-                  team.name.isEmpty ? '?' : team.name.characters.first,
-                ),
+                child: Text(_firstLetter(team.name)),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -203,6 +201,7 @@ class _TeamCard extends StatelessWidget {
                   ],
                 ),
               ),
+              const Icon(Icons.chevron_right),
             ],
           ),
         ),
@@ -230,5 +229,15 @@ class _TeamCard extends StatelessWidget {
     }
 
     return parts.join(' · ');
+  }
+
+  String _firstLetter(String value) {
+    final trimmed = value.trim();
+
+    if (trimmed.isEmpty) {
+      return '?';
+    }
+
+    return trimmed.substring(0, 1).toUpperCase();
   }
 }

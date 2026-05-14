@@ -38,6 +38,8 @@ import '../features/support/presentation/support_screen.dart';
 import '../features/teams/presentation/create_team_screen.dart';
 import '../features/teams/presentation/teams_screen.dart';
 import '../features/welcome/presentation/welcome_screen.dart';
+import '../features/teams/presentation/edit_team_screen.dart';
+import '../features/teams/presentation/team_detail_screen.dart';
 
 final GoRouter appRouter = GoRouter(
   initialLocation: '/',
@@ -157,6 +159,27 @@ final GoRouter appRouter = GoRouter(
       name: 'teams-create',
       builder: (context, state) => const CreateTeamScreen(),
     ),
+
+    GoRoute(
+      path: '/teams/:teamId',
+      name: 'team-detail',
+      builder: (context, state) {
+        final teamId = state.pathParameters['teamId'] ?? '';
+
+        return TeamDetailScreen(teamId: teamId);
+      },
+    ),
+    GoRoute(
+      path: '/teams/:teamId/edit',
+      name: 'team-edit',
+      builder: (context, state) {
+        final teamId = state.pathParameters['teamId'] ?? '';
+
+        return EditTeamScreen(teamId: teamId);
+      },
+    ),
+
+
     GoRoute(
       path: '/invitations',
       name: 'invitations',

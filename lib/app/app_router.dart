@@ -29,9 +29,14 @@ import '../features/fees/presentation/fee_detail_screen.dart';
 import '../features/fees/presentation/fees_screen.dart';
 import '../features/legal/presentation/legal_center_screen.dart';
 import '../features/legal/presentation/legal_document_screen.dart';
+import '../features/members/presentation/assign_team_member_screen.dart';
 import '../features/members/presentation/create_invitation_screen.dart';
+import '../features/members/presentation/edit_member_screen.dart';
 import '../features/members/presentation/invitation_acceptance_screen.dart';
 import '../features/members/presentation/invitations_screen.dart';
+import '../features/members/presentation/link_athlete_account_screen.dart';
+import '../features/members/presentation/link_parent_relation_screen.dart';
+import '../features/members/presentation/members_screen.dart';
 import '../features/privacy/presentation/privacy_screen.dart';
 import '../features/profile/presentation/profile_screen.dart';
 import '../features/settings/presentation/settings_screen.dart';
@@ -42,10 +47,6 @@ import '../features/teams/presentation/edit_team_screen.dart';
 import '../features/teams/presentation/team_detail_screen.dart';
 import '../features/teams/presentation/teams_screen.dart';
 import '../features/welcome/presentation/welcome_screen.dart';
-import '../features/members/presentation/assign_team_member_screen.dart';
-import '../features/members/presentation/link_athlete_account_screen.dart';
-import '../features/members/presentation/link_parent_relation_screen.dart';
-import '../features/members/presentation/members_screen.dart';
 
 final GoRouter appRouter = GoRouter(
   initialLocation: '/',
@@ -198,11 +199,19 @@ final GoRouter appRouter = GoRouter(
       name: 'invitations-create',
       builder: (context, state) => const CreateInvitationScreen(),
     ),
-
     GoRoute(
       path: '/members',
       name: 'members',
       builder: (context, state) => const MembersScreen(),
+    ),
+    GoRoute(
+      path: '/members/:userId/edit',
+      name: 'members-edit',
+      builder: (context, state) {
+        final userId = state.pathParameters['userId'] ?? '';
+
+        return EditMemberScreen(userId: userId);
+      },
     ),
     GoRoute(
       path: '/members/assign-team',
@@ -219,7 +228,6 @@ final GoRouter appRouter = GoRouter(
       name: 'members-link-athlete-account',
       builder: (context, state) => const LinkAthleteAccountScreen(),
     ),
-
     GoRoute(
       path: '/athletes',
       name: 'athletes',

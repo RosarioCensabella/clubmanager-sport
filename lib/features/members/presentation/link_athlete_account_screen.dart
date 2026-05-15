@@ -1,7 +1,6 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/permissions/club_role.dart';
 import '../../../core/utils/app_result.dart';
 import '../../../core/widgets/app_error_view.dart';
 import '../../../core/widgets/app_loading_view.dart';
@@ -97,7 +96,7 @@ class _LinkAthleteAccountScreenState
     }
 
     if (_selectedAthleteUserId == null || _selectedAthleteUserId!.isEmpty) {
-      _showMessage('Seleziona un account atleta.');
+      _showMessage('Seleziona un account.');
       return;
     }
 
@@ -130,7 +129,6 @@ class _LinkAthleteAccountScreenState
         setState(() {
           _isLoading = false;
         });
-
         _showMessage(message);
     }
   }
@@ -145,12 +143,12 @@ class _LinkAthleteAccountScreenState
     ).showSnackBar(SnackBar(content: Text(message)));
   }
 
-  List<MemberSummary> _athleteAccounts(List<MemberSummary> members) {
+  List<MemberSummary> _accountCandidates(List<MemberSummary> members) {
     final normalizedQuery = _accountQuery.trim().toLowerCase();
 
     return members
-        .where((member) => member.userId.trim().isNotEmpty)
-        .where((member) => member.role == ClubRole.athlete)
+        .where((member) => member.hasUserAccount)
+        .where((member) => !member.isAthleteProfileOnly)
         .where((member) {
           if (normalizedQuery.isEmpty) {
             return true;
@@ -209,7 +207,7 @@ class _LinkAthleteAccountScreenState
       return accountState;
     }
 
-    return '$teamName Â· $accountState';
+    return '$teamName · $accountState';
   }
 
   @override
@@ -237,7 +235,7 @@ class _LinkAthleteAccountScreenState
               return AppErrorView(message: message, onRetry: _reload);
 
             case AppSuccess(:final data):
-              final visibleAccounts = _athleteAccounts(data.members);
+              final visibleAccounts = _accountCandidates(data.members);
               final visibleAthletes = _filteredAthletes(data.athletes);
               final selectedAccount = _selectedAccountFrom(data.members);
               final selectedAthlete = _selectedAthleteFrom(data.athletes);
@@ -253,7 +251,7 @@ class _LinkAthleteAccountScreenState
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Cerca un account atleta e collegalo alla relativa scheda anagrafica.',
+                      'Cerca un account già presente nel club e collegalo alla relativa scheda anagrafica atleta.',
                       style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                         color: const Color(0xFF52616B),
                       ),
@@ -269,8 +267,8 @@ class _LinkAthleteAccountScreenState
                     TextField(
                       enabled: !_isLoading,
                       decoration: const InputDecoration(
-                        labelText: 'Cerca account atleta',
-                        hintText: 'Nome o email...',
+                        labelText: 'Cerca account',
+                        hintText: 'Nome, email, ruolo...',
                         prefixIcon: Icon(Icons.search),
                       ),
                       onChanged: (value) {
@@ -280,12 +278,11 @@ class _LinkAthleteAccountScreenState
                       },
                     ),
                     const SizedBox(height: 12),
-                    _SectionTitle(title: 'Account atleta disponibili'),
+                    const _SectionTitle(title: 'Account disponibili'),
                     const SizedBox(height: 8),
                     if (visibleAccounts.isEmpty)
                       const _EmptyInlineMessage(
-                        message:
-                            'Nessun account atleta trovato. Invitalo prima come Atleta.',
+                        message: 'Nessun account trovato.',
                       )
                     else
                       for (final account in visibleAccounts) ...[
@@ -307,7 +304,7 @@ class _LinkAthleteAccountScreenState
                         icon: Icons.directions_run_outlined,
                         title: 'Scheda atleta selezionata',
                         value:
-                            '${selectedAthlete.fullName} Â· ${_athleteLabel(selectedAthlete)}',
+                            '${selectedAthlete.fullName} · ${_athleteLabel(selectedAthlete)}',
                       ),
                     const SizedBox(height: 12),
                     TextField(
@@ -324,7 +321,7 @@ class _LinkAthleteAccountScreenState
                       },
                     ),
                     const SizedBox(height: 12),
-                    _SectionTitle(title: 'Schede atleta disponibili'),
+                    const _SectionTitle(title: 'Schede atleta disponibili'),
                     const SizedBox(height: 8),
                     if (visibleAthletes.isEmpty)
                       const _EmptyInlineMessage(
@@ -457,7 +454,7 @@ class _SelectableAccountTile extends StatelessWidget {
       title: member.fullName,
       subtitle: member.email.isEmpty
           ? member.roleLabel
-          : '${member.email} Â· ${member.roleLabel}',
+          : '${member.email} · ${member.roleLabel}',
       onTap: onTap,
     );
   }

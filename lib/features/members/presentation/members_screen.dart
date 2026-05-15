@@ -59,24 +59,22 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
     });
   }
 
-  void _goToInvitations() {
-    context.push('/invitations').then((_) {
-      if (!mounted) {
-        return;
-      }
+  void _showMessage(String message) {
+    if (!mounted) {
+      return;
+    }
 
-      _reload();
-    });
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  void _goToInvitations() {
+    context.push('/invitations').then((_) => _reload());
   }
 
   void _goToCreateInvitation() {
-    context.push('/invitations/create').then((_) {
-      if (!mounted) {
-        return;
-      }
-
-      _reload();
-    });
+    context.push('/invitations/create').then((_) => _reload());
   }
 
   void _goToAssignTeam() {
@@ -102,7 +100,7 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
       _reload();
 
       if (result == true) {
-        _showMessage('Genitore/tutore collegato.');
+        _showMessage('Collegamento genitore/tutore aggiornato.');
       }
     });
   }
@@ -121,16 +119,42 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
     });
   }
 
-  void _showMessage(String message) {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) {
-        return;
-      }
+  void _goToEditMember(MemberSummary member) {
+    if (member.hasUserAccount) {
+      context.push('/members/${member.userId}/edit').then((result) {
+        if (!mounted) {
+          return;
+        }
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(message)));
-    });
+        _reload();
+
+        if (result == true) {
+          _showMessage('Persona aggiornata.');
+        }
+      });
+
+      return;
+    }
+
+    final athleteProfileId = member.athleteProfileId;
+
+    if (athleteProfileId != null && athleteProfileId.isNotEmpty) {
+      context.push('/athletes/$athleteProfileId/edit').then((result) {
+        if (!mounted) {
+          return;
+        }
+
+        _reload();
+
+        if (result == true) {
+          _showMessage('Scheda atleta aggiornata.');
+        }
+      });
+
+      return;
+    }
+
+    _showMessage('Questa scheda non può essere modificata.');
   }
 
   List<MemberSummary> _applyFilters(List<MemberSummary> members) {
@@ -235,7 +259,10 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
                       )
                     else
                       for (final member in filteredMembers) ...[
-                        _MemberCard(member: member),
+                        _MemberCard(
+                          member: member,
+                          onEditPressed: () => _goToEditMember(member),
+                        ),
                         const SizedBox(height: 12),
                       ],
                   ],
@@ -343,22 +370,10 @@ class _FiltersCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const filters = [
-      _RoleFilterOption(value: 'all', label: 'Tutti'),
-      _RoleFilterOption(value: 'owner', label: 'Proprietario'),
-      _RoleFilterOption(value: 'admin', label: 'Admin'),
-      _RoleFilterOption(value: 'team_manager', label: 'Manager'),
-      _RoleFilterOption(value: 'coach', label: 'Allenatore'),
-      _RoleFilterOption(value: 'staff', label: 'Staff'),
-      _RoleFilterOption(value: 'athlete', label: 'Atleta'),
-      _RoleFilterOption(value: 'parent', label: 'Genitore/Tutore'),
-    ];
-
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(18),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             TextField(
               controller: searchController,
@@ -369,38 +384,36 @@ class _FiltersCard extends StatelessWidget {
               ),
               onChanged: onSearchChanged,
             ),
-            const SizedBox(height: 14),
-            Text(
-              'Filtro ruolo',
-              style: Theme.of(
-                context,
-              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900),
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                for (final filter in filters)
-                  ChoiceChip(
-                    label: Text(filter.label),
-                    selected: roleFilter == filter.value,
-                    onSelected: (_) => onRoleFilterChanged(filter.value),
-                  ),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<String>(
+              initialValue: roleFilter,
+              decoration: const InputDecoration(
+                labelText: 'Filtro ruolo',
+                prefixIcon: Icon(Icons.filter_list),
+              ),
+              items: const [
+                DropdownMenuItem(value: 'all', child: Text('Tutti')),
+                DropdownMenuItem(value: 'owner', child: Text('Proprietario')),
+                DropdownMenuItem(value: 'admin', child: Text('Admin')),
+                DropdownMenuItem(
+                  value: 'team_manager',
+                  child: Text('Manager squadra'),
+                ),
+                DropdownMenuItem(value: 'coach', child: Text('Allenatore')),
+                DropdownMenuItem(value: 'staff', child: Text('Staff')),
+                DropdownMenuItem(value: 'athlete', child: Text('Atleta')),
+                DropdownMenuItem(
+                  value: 'parent',
+                  child: Text('Genitore/Tutore'),
+                ),
               ],
+              onChanged: onRoleFilterChanged,
             ),
           ],
         ),
       ),
     );
   }
-}
-
-class _RoleFilterOption {
-  const _RoleFilterOption({required this.value, required this.label});
-
-  final String value;
-  final String label;
 }
 
 class _NoMembersCard extends StatelessWidget {
@@ -459,9 +472,10 @@ class _NoMembersCard extends StatelessWidget {
 }
 
 class _MemberCard extends StatelessWidget {
-  const _MemberCard({required this.member});
+  const _MemberCard({required this.member, required this.onEditPressed});
 
   final MemberSummary member;
+  final VoidCallback onEditPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -512,6 +526,11 @@ class _MemberCard extends StatelessWidget {
                         ),
                         label: Text(member.statusLabel),
                       ),
+                      if (member.isAthleteProfileOnly)
+                        const Chip(
+                          avatar: Icon(Icons.info_outline, size: 18),
+                          label: Text('Solo scheda atleta'),
+                        ),
                     ],
                   ),
                   if (member.teamAssignments.isNotEmpty) ...[
@@ -566,8 +585,44 @@ class _MemberCard extends StatelessWidget {
                       ],
                     ),
                   ],
+                  if (member.athleteProfiles.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    Text(
+                      'Schede atleta',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        for (final athlete in member.athleteProfiles)
+                          Chip(
+                            avatar: const Icon(
+                              Icons.directions_run_outlined,
+                              size: 18,
+                            ),
+                            label: Text(
+                              athlete.teamName == null ||
+                                      athlete.teamName!.trim().isEmpty
+                                  ? athlete.athleteName
+                                  : '${athlete.athleteName} · ${athlete.teamName}',
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
                 ],
               ),
+            ),
+            IconButton(
+              tooltip: member.hasUserAccount
+                  ? 'Modifica persona'
+                  : 'Modifica scheda atleta',
+              onPressed: onEditPressed,
+              icon: const Icon(Icons.edit_outlined),
             ),
           ],
         ),

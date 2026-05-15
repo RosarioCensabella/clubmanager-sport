@@ -1,7 +1,6 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/permissions/club_role.dart';
 import '../../../core/utils/app_result.dart';
 import '../../../core/widgets/app_error_view.dart';
 import '../../../core/widgets/app_loading_view.dart';
@@ -132,7 +131,6 @@ class _LinkParentRelationScreenState
         setState(() {
           _isLoading = false;
         });
-
         _showMessage(message);
     }
   }
@@ -151,8 +149,8 @@ class _LinkParentRelationScreenState
     final normalizedQuery = _parentQuery.trim().toLowerCase();
 
     return members
-        .where((member) => member.userId.trim().isNotEmpty)
-        .where((member) => member.role == ClubRole.parent)
+        .where((member) => member.hasUserAccount)
+        .where((member) => !member.isAthleteProfileOnly)
         .where((member) {
           if (normalizedQuery.isEmpty) {
             return true;
@@ -208,7 +206,7 @@ class _LinkParentRelationScreenState
       return athlete.fullName;
     }
 
-    return '${athlete.fullName} Â· $teamName';
+    return '${athlete.fullName} · $teamName';
   }
 
   @override
@@ -252,7 +250,7 @@ class _LinkParentRelationScreenState
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Cerca un genitore giÃ  collegato al club e abbinalo a una scheda atleta.',
+                      'Cerca una persona già collegata al club e abbinala a una scheda atleta come genitore, madre, padre o tutore.',
                       style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                         color: const Color(0xFF52616B),
                       ),
@@ -261,15 +259,15 @@ class _LinkParentRelationScreenState
                     if (selectedParent != null)
                       _SelectedValueCard(
                         icon: Icons.person_outline,
-                        title: 'Genitore selezionato',
+                        title: 'Persona selezionata',
                         value: selectedParent.fullName,
                       ),
                     const SizedBox(height: 12),
                     TextField(
                       enabled: !_isLoading,
                       decoration: const InputDecoration(
-                        labelText: 'Cerca genitore/tutore',
-                        hintText: 'Nome o email...',
+                        labelText: 'Cerca persona',
+                        hintText: 'Nome, email, ruolo...',
                         prefixIcon: Icon(Icons.search),
                       ),
                       onChanged: (value) {
@@ -279,12 +277,11 @@ class _LinkParentRelationScreenState
                       },
                     ),
                     const SizedBox(height: 12),
-                    _SectionTitle(title: 'Genitori disponibili'),
+                    const _SectionTitle(title: 'Persone disponibili'),
                     const SizedBox(height: 8),
                     if (visibleParents.isEmpty)
                       const _EmptyInlineMessage(
-                        message:
-                            'Nessun genitore/tutore trovato. Invitalo prima come Genitore/Tutore.',
+                        message: 'Nessuna persona trovata.',
                       )
                     else
                       for (final parent in visibleParents) ...[
@@ -322,7 +319,7 @@ class _LinkParentRelationScreenState
                       },
                     ),
                     const SizedBox(height: 12),
-                    _SectionTitle(title: 'Atleti disponibili'),
+                    const _SectionTitle(title: 'Atleti disponibili'),
                     const SizedBox(height: 8),
                     if (visibleAthletes.isEmpty)
                       const _EmptyInlineMessage(
@@ -344,7 +341,7 @@ class _LinkParentRelationScreenState
                         const SizedBox(height: 8),
                       ],
                     const SizedBox(height: 16),
-                    _SectionTitle(title: 'Tipo relazione'),
+                    const _SectionTitle(title: 'Tipo relazione'),
                     const SizedBox(height: 8),
                     _RelationTypePicker(
                       selectedRelationType: _relationType,
@@ -467,7 +464,7 @@ class _SelectableParentTile extends StatelessWidget {
       title: member.fullName,
       subtitle: member.email.isEmpty
           ? member.roleLabel
-          : '${member.email} Â· ${member.roleLabel}',
+          : '${member.email} · ${member.roleLabel}',
       onTap: onTap,
     );
   }

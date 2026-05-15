@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/permissions/club_role.dart';
@@ -132,7 +132,6 @@ class _AssignTeamMemberScreenState
         setState(() {
           _isLoading = false;
         });
-
         _showMessage(message);
     }
   }
@@ -151,7 +150,8 @@ class _AssignTeamMemberScreenState
     final normalizedQuery = _memberQuery.trim().toLowerCase();
 
     return members
-        .where((member) => member.userId.trim().isNotEmpty)
+        .where((member) => member.hasUserAccount)
+        .where((member) => !member.isAthleteProfileOnly)
         .where((member) {
           if (normalizedQuery.isEmpty) {
             return true;
@@ -248,7 +248,7 @@ class _AssignTeamMemberScreenState
                         icon: Icons.person_outline,
                         title: 'Persona selezionata',
                         value:
-                            '${selectedMember.fullName} Â· ${selectedMember.roleLabel}',
+                            '${selectedMember.fullName} · ${selectedMember.roleLabel}',
                       ),
                     const SizedBox(height: 12),
                     TextField(
@@ -448,7 +448,7 @@ class _SelectableMemberTile extends StatelessWidget {
       title: member.fullName,
       subtitle: member.email.isEmpty
           ? member.roleLabel
-          : '${member.email} Â· ${member.roleLabel}',
+          : '${member.email} · ${member.roleLabel}',
       onTap: onTap,
     );
   }

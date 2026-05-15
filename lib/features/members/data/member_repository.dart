@@ -268,7 +268,7 @@ class MemberRepository {
       );
     }
 
-    if (!_isAssignableTeamRole(teamRole)) {
+    if (teamRole == ClubRole.unknown) {
       return const AppFailure(
         'Ruolo non valido per assegnazione squadra.',
         code: 'invalid_team_role',
@@ -276,48 +276,15 @@ class MemberRepository {
     }
 
     try {
-      await _ensureClubMembership(
-        clubId: clubId,
-        userId: userId,
-        role: teamRole,
+      await _client.rpc(
+        'member_access_assign_user_to_team',
+        params: {
+          'target_club_id': clubId,
+          'target_user_id': userId,
+          'target_team_id': teamId,
+          'target_role': teamRole.databaseValue,
+        },
       );
-
-      await _client
-          .from('team_memberships')
-          .update({'status': 'removed'})
-          .eq('team_id', teamId)
-          .eq('user_id', userId)
-          .neq('role', teamRole.databaseValue);
-
-      final existingData = await _client
-          .from('team_memberships')
-          .select('id')
-          .eq('team_id', teamId)
-          .eq('user_id', userId)
-          .eq('role', teamRole.databaseValue)
-          .limit(1);
-
-      final existingRows = List<Map<String, dynamic>>.from(existingData);
-
-      if (existingRows.isNotEmpty) {
-        final assignmentId = (existingRows.first['id'] ?? '').toString();
-
-        if (assignmentId.isNotEmpty) {
-          await _client
-              .from('team_memberships')
-              .update({'status': 'active'})
-              .eq('id', assignmentId);
-        }
-
-        return const AppSuccess(null);
-      }
-
-      await _client.from('team_memberships').insert({
-        'team_id': teamId,
-        'user_id': userId,
-        'role': teamRole.databaseValue,
-        'status': 'active',
-      });
 
       return const AppSuccess(null);
     } on PostgrestException catch (error) {
@@ -353,54 +320,15 @@ class MemberRepository {
     }
 
     try {
-      final athleteData = await _client
-          .from('athlete_profiles')
-          .select('id, club_id')
-          .eq('id', athleteId)
-          .eq('club_id', clubId)
-          .maybeSingle();
-
-      if (athleteData == null) {
-        return const AppFailure(
-          'Atleta non trovato nel club attivo.',
-          code: 'athlete_not_found',
-        );
-      }
-
-      await _ensureClubMembership(
-        clubId: clubId,
-        userId: parentUserId,
-        role: ClubRole.parent,
+      await _client.rpc(
+        'member_access_link_parent_to_athlete',
+        params: {
+          'target_club_id': clubId,
+          'target_parent_user_id': parentUserId,
+          'target_athlete_id': athleteId,
+          'target_relation_type': relationType,
+        },
       );
-
-      final existingData = await _client
-          .from('parent_athlete_relations')
-          .select('id')
-          .eq('parent_user_id', parentUserId)
-          .eq('athlete_profile_id', athleteId)
-          .limit(1);
-
-      final existingRows = List<Map<String, dynamic>>.from(existingData);
-
-      if (existingRows.isNotEmpty) {
-        final relationId = (existingRows.first['id'] ?? '').toString();
-
-        if (relationId.isNotEmpty) {
-          await _client
-              .from('parent_athlete_relations')
-              .update({'relation_type': relationType, 'verified': true})
-              .eq('id', relationId);
-        }
-
-        return const AppSuccess(null);
-      }
-
-      await _client.from('parent_athlete_relations').insert({
-        'parent_user_id': parentUserId,
-        'athlete_profile_id': athleteId,
-        'relation_type': relationType,
-        'verified': true,
-      });
 
       return const AppSuccess(null);
     } on PostgrestException catch (error) {
@@ -435,48 +363,13 @@ class MemberRepository {
     }
 
     try {
-      final athleteData = await _client
-          .from('athlete_profiles')
-          .select('id, club_id, team_id, user_id')
-          .eq('id', athleteId)
-          .eq('club_id', clubId)
-          .maybeSingle();
-
-      if (athleteData == null) {
-        return const AppFailure(
-          'Scheda atleta non trovata nel club attivo.',
-          code: 'athlete_not_found',
-        );
-      }
-
-      final existingUserId = athleteData['user_id']?.toString();
-
-      if (existingUserId != null &&
-          existingUserId.isNotEmpty &&
-          existingUserId != athleteUserId) {
-        return const AppFailure(
-          'Questa scheda atleta è già collegata a un altro account.',
-          code: 'athlete_already_linked',
-        );
-      }
-
-      await _ensureClubMembership(
-        clubId: clubId,
-        userId: athleteUserId,
-        role: ClubRole.athlete,
-      );
-
-      await _client
-          .from('athlete_profiles')
-          .update({'user_id': athleteUserId, 'active': true})
-          .eq('id', athleteId);
-
-      final teamId = athleteData['team_id']?.toString();
-
-      await _syncAthleteTeamMembership(
-        athleteId: athleteId,
-        athleteUserId: athleteUserId,
-        teamId: teamId,
+      await _client.rpc(
+        'member_access_link_athlete_account',
+        params: {
+          'target_club_id': clubId,
+          'target_athlete_user_id': athleteUserId,
+          'target_athlete_id': athleteId,
+        },
       );
 
       return const AppSuccess(null);
@@ -488,148 +381,5 @@ class MemberRepository {
         code: 'athlete_account_link_error',
       );
     }
-  }
-
-  Future<void> _ensureClubMembership({
-    required String clubId,
-    required String userId,
-    required ClubRole role,
-  }) async {
-    final membershipData = await _client
-        .from('club_memberships')
-        .select('id, role, status')
-        .eq('club_id', clubId)
-        .eq('user_id', userId)
-        .limit(1);
-
-    final memberships = List<Map<String, dynamic>>.from(membershipData);
-
-    if (memberships.isEmpty) {
-      await _client.from('club_memberships').insert({
-        'club_id': clubId,
-        'user_id': userId,
-        'role': role.databaseValue,
-        'status': 'active',
-      });
-
-      return;
-    }
-
-    final membership = memberships.first;
-    final membershipId = (membership['id'] ?? '').toString();
-    final currentRole = clubRoleFromDatabaseValue(
-      membership['role']?.toString(),
-    );
-
-    if (membershipId.isEmpty) {
-      return;
-    }
-
-    await _client
-        .from('club_memberships')
-        .update({
-          'role': _highestRole(currentRole, role).databaseValue,
-          'status': 'active',
-        })
-        .eq('id', membershipId);
-  }
-
-  ClubRole _highestRole(ClubRole currentRole, ClubRole requestedRole) {
-    if (_rolePriority(currentRole) >= _rolePriority(requestedRole)) {
-      return currentRole;
-    }
-
-    return requestedRole;
-  }
-
-  int _rolePriority(ClubRole role) {
-    switch (role) {
-      case ClubRole.owner:
-        return 70;
-      case ClubRole.admin:
-        return 60;
-      case ClubRole.teamManager:
-        return 50;
-      case ClubRole.coach:
-        return 40;
-      case ClubRole.staff:
-        return 30;
-      case ClubRole.parent:
-        return 20;
-      case ClubRole.athlete:
-        return 10;
-      case ClubRole.unknown:
-        return 0;
-    }
-  }
-
-  Future<void> _syncAthleteTeamMembership({
-    required String athleteId,
-    required String athleteUserId,
-    required String? teamId,
-  }) async {
-    final normalizedTeamId = teamId?.trim();
-
-    if (normalizedTeamId == null || normalizedTeamId.isEmpty) {
-      return;
-    }
-
-    final byAthleteData = await _client
-        .from('team_memberships')
-        .select('id')
-        .eq('team_id', normalizedTeamId)
-        .eq('athlete_profile_id', athleteId)
-        .eq('role', 'athlete')
-        .limit(1);
-
-    final byAthleteRows = List<Map<String, dynamic>>.from(byAthleteData);
-
-    if (byAthleteRows.isNotEmpty) {
-      final assignmentId = (byAthleteRows.first['id'] ?? '').toString();
-
-      if (assignmentId.isNotEmpty) {
-        await _client
-            .from('team_memberships')
-            .update({'user_id': athleteUserId, 'status': 'active'})
-            .eq('id', assignmentId);
-      }
-
-      return;
-    }
-
-    final byUserData = await _client
-        .from('team_memberships')
-        .select('id')
-        .eq('team_id', normalizedTeamId)
-        .eq('user_id', athleteUserId)
-        .eq('role', 'athlete')
-        .limit(1);
-
-    final byUserRows = List<Map<String, dynamic>>.from(byUserData);
-
-    if (byUserRows.isNotEmpty) {
-      final assignmentId = (byUserRows.first['id'] ?? '').toString();
-
-      if (assignmentId.isNotEmpty) {
-        await _client
-            .from('team_memberships')
-            .update({'athlete_profile_id': athleteId, 'status': 'active'})
-            .eq('id', assignmentId);
-      }
-
-      return;
-    }
-
-    await _client.from('team_memberships').insert({
-      'team_id': normalizedTeamId,
-      'user_id': athleteUserId,
-      'athlete_profile_id': athleteId,
-      'role': 'athlete',
-      'status': 'active',
-    });
-  }
-
-  bool _isAssignableTeamRole(ClubRole role) {
-    return role != ClubRole.unknown;
   }
 }
